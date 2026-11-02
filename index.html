@@ -1,0 +1,3943 @@
+<!DOCTYPE html>
+<!--
+  45-Day JEE Revision Tracker
+  --------------------------------------------------------------
+  Single-file study planner. No build step or external libraries.
+  Main areas: dashboard, subject planners, block plan, daily quests,
+  achievements, analytics, themes, local persistence and backup.
+-->
+
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ORBIT — JEE Study Command Centre</title>
+<style>
+/* ============================================================
+   1. DESIGN TOKENS, BASE STYLES AND LAYOUT
+   ============================================================ */
+
+:root {
+  --bg:#f3f6fc;
+  --panel:#ffffff;
+  --panel2:#edf1fa;
+  --text:#172033;
+  --muted:#667085;
+  --line:#dce3ef;
+  --accent:#5267d8;
+  --green:#15966d;
+  --orange:#b96b12;
+  --red:#c43d55}
+
+* {
+  box-sizing:border-box}
+
+body {
+  margin:0;
+  background:radial-gradient(ellipse at 80% -10%,#dce5ff 0,transparent 38%),var(--bg);
+  color:var(--text);
+  font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}
+
+.app {
+  display:grid;
+  grid-template-columns:230px 1fr;
+  min-height:100vh}
+
+.side {
+  padding:26px 18px;
+  border-right:1px solid var(--line);
+  background:#0c1426}
+
+.brand {
+  font-size:17px;
+  font-weight:800;
+  letter-spacing:-.5px;
+  margin:4px 10px 30px}
+
+.brand span {
+  color:var(--accent)}
+
+.nav {
+  display:grid;
+  gap:7px}
+
+.nav button {
+  border:0;
+  text-align:left;
+  background:transparent;
+  color:var(--muted);
+  padding:12px;
+  border-radius:10px;
+  cursor:pointer;
+  font:inherit}
+
+.nav button.active,.nav button:hover {
+  background:var(--panel2);
+  color:var(--text)}
+
+.side-note {
+  position:fixed;
+  bottom:20px;
+  color:var(--muted);
+  font-size:11px;
+  width:190px}
+
+main {
+  padding:32px;
+  max-width:1500px;
+  width:100%;
+  margin:auto}
+
+.top {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  margin-bottom:25px}
+
+.eyebrow {
+  color:var(--accent);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:1.5px;
+  text-transform:uppercase}
+
+.title {
+  font-size:28px;
+  letter-spacing:-1px;
+  margin:4px 0}
+
+.sub {
+  color:var(--muted)}
+
+.actions {
+  display:flex;
+  gap:9px}
+
+.btn {
+  background:var(--panel2);
+  color:var(--text);
+  border:1px solid var(--line);
+  border-radius:9px;
+  padding:9px 13px;
+  cursor:pointer;
+  font:inherit}
+
+.btn.primary {
+  background:var(--accent);
+  color:#10172b;
+  border-color:transparent;
+  font-weight:700}
+
+.cards {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:14px;
+  margin-bottom:18px}
+
+.card,.panel {
+  background:linear-gradient(145deg,var(--panel),#111a2d);
+  border:1px solid var(--line);
+  border-radius:15px;
+  padding:18px}
+
+.label {
+  color:var(--muted);
+  font-size:12px}
+
+.metric {
+  font-size:28px;
+  font-weight:750;
+  margin-top:5px;
+  letter-spacing:-1px}
+
+.metric small {
+  font-size:13px;
+  color:var(--muted);
+  font-weight:500}
+
+.grid2 {
+  display:grid;
+  grid-template-columns:1.3fr 1fr;
+  gap:14px;
+  margin-bottom:18px}
+
+.panel h3 {
+  margin:0 0 16px;
+  font-size:15px}
+
+.subject-progress {
+  display:grid;
+  gap:13px}
+
+.rowline {
+  display:grid;
+  grid-template-columns:90px 1fr 42px;
+  gap:12px;
+  align-items:center}
+
+.bar {
+  height:8px;
+  border-radius:99px;
+  background:#28344c;
+  overflow:hidden}
+
+.bar i {
+  display:block;
+  height:100%;
+  background:linear-gradient(90deg,#7f91ff,#42d6a4);
+  border-radius:99px}
+
+.focus {
+  color:var(--muted);
+  font-size:13px}
+
+.toolbar {
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-bottom:14px}
+
+.search {
+  background:var(--panel);
+  border:1px solid var(--line);
+  color:var(--text);
+  border-radius:9px;
+  padding:10px 12px;
+  min-width:220px;
+  font:inherit}
+
+.select {
+  background:var(--panel);
+  color:var(--text);
+  border:1px solid var(--line);
+  border-radius:9px;
+  padding:10px;
+  font:inherit}
+
+.tablewrap {
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:13px;
+  background:var(--panel)}
+
+table {
+  border-collapse:collapse;
+  width:100%;
+  min-width:1050px;
+  font-size:12px}
+
+th {
+  position:sticky;
+  top:0;
+  background:#1a2741;
+  color:#b9c5df;
+  text-align:left;
+  font-weight:700;
+  white-space:nowrap}
+
+td,th {
+  padding:11px 10px;
+  border-bottom:1px solid var(--line)}
+
+td:first-child,th:first-child {
+  position:sticky;
+  left:0;
+  background:#141f34;
+  z-index:1}
+
+th:first-child {
+  background:#1a2741;
+  z-index:2}
+
+.code {
+  color:var(--accent);
+  font-weight:800}
+
+.chapter {
+  font-weight:650;
+  min-width:200px}
+
+.check {
+  text-align:center}
+
+.check input {
+  accent-color:var(--green);
+  width:16px;
+  height:16px;
+  cursor:pointer}
+
+.pill {
+  font-size:10px;
+  padding:3px 7px;
+  border-radius:20px;
+  background:#283653;
+  color:#c6d3f4}
+
+.empty {
+  color:var(--muted);
+  padding:30px;
+  text-align:center}
+
+.blockgrid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px}
+
+.blockcard {
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:13px;
+  padding:16px}
+
+.blockcard h3 {
+  margin:0 0 12px;
+  color:var(--accent)}
+
+.blockcard p {
+  margin:8px 0;
+  color:#c4cee3;
+  font-size:12px}
+
+.blockcard b {
+  color:var(--muted);
+  display:inline-block;
+  width:22px}
+
+.hidden {
+  display:none!important}
+
+/* Achievements and celebration */
+.badge-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:10px}
+
+.badge {
+  border:1px solid var(--line);
+  background:var(--panel2);
+  border-radius:12px;
+  padding:12px;
+  display:flex;
+  gap:10px;
+  align-items:center}
+
+.badge.locked {
+  opacity:.42;
+  filter:grayscale(1)}
+
+.badge-icon {
+  font-size:25px;
+  flex:0 0 30px}
+
+.badge-info {
+  min-width:0;
+  flex:1}
+
+.badge-track {
+  height:6px;
+  background:var(--line);
+  border-radius:99px;
+  overflow:hidden;
+  margin:7px 0 3px}
+
+.badge-track i {
+  display:block;
+  height:100%;
+  background:linear-gradient(90deg,var(--accent),var(--green));
+  border-radius:99px}
+
+.badge.earned {
+  border-color:var(--green);
+  background:linear-gradient(135deg,var(--panel2),var(--panel))}
+
+.badge-status {
+  font-size:9px!important;
+  letter-spacing:.5px;
+  font-weight:700}
+
+.badge strong {
+  display:block;
+  font-size:12px}
+
+.badge small {
+  color:var(--muted);
+  font-size:11px}
+
+.celebrate {
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:99;
+  overflow:hidden}
+
+.confetti {
+  position:absolute;
+  top:-18px;
+  width:9px;
+  height:14px;
+  border-radius:2px;
+  animation:fall 1.65s ease-in forwards}
+
+@keyframes fall {
+  to {
+  transform:translate3d(var(--drift),105vh,0) rotate(760deg);
+  opacity:.15}
+
+}
+
+.toast {
+  position:fixed;
+  right:22px;
+  top:22px;
+  z-index:100;
+  background:var(--panel);
+  border:1px solid var(--accent);
+  color:var(--text);
+  padding:14px 18px;
+  border-radius:13px;
+  box-shadow:0 12px 35px #0003;
+  max-width:320px;
+  animation:toastIn .25s ease-out}
+
+.toast strong {
+  display:block;
+  color:var(--accent);
+  margin-bottom:3px}
+
+@keyframes toastIn {
+  from {
+  transform:translateY(-12px);
+  opacity:0}
+
+to {
+  transform:translateY(0);
+  opacity:1}
+
+}
+
+.row-select {
+  max-width:76px;
+  padding:6px 5px;
+  font-size:11px;
+  border-radius:7px;
+  background:var(--panel);
+  color:var(--text);
+  border:1px solid var(--line)}
+
+/* Light theme overrides */
+body[data-theme="light"] {
+  --bg:#f3f6fc;
+  --panel:#ffffff;
+  --panel2:#edf1fa;
+  --text:#172033;
+  --muted:#667085;
+  --line:#dce3ef;
+  --accent:#5267d8;
+  --green:#15966d;
+  --orange:#b96b12;
+  --red:#c43d55;
+  background:radial-gradient(ellipse at 80% -10%,#dce5ff 0,transparent 38%),var(--bg)}
+
+body[data-theme="light"] .side {
+  background:#fff}
+
+body[data-theme="light"] .card,body[data-theme="light"] .panel {
+  background:linear-gradient(145deg,#fff,#f8faff)}
+
+body[data-theme="light"] .bar {
+  background:#e2e8f2}
+
+body[data-theme="light"] th {
+  background:#e9eef9;
+  color:#34415d}
+
+body[data-theme="light"] td:first-child {
+  background:#f7f9fd}
+
+body[data-theme="light"] th:first-child {
+  background:#e9eef9}
+
+body[data-theme="light"] .pill {
+  background:#e8edff;
+  color:#4255a8}
+
+body[data-theme="light"] .blockcard {
+  background:#fff}
+
+body[data-theme="light"] .blockcard p {
+  color:#46536b}
+
+body[data-theme="light"] .btn.primary {
+  color:#fff}
+
+body[data-theme="light"] .nav button.active,body[data-theme="light"] .nav button:hover {
+  background:#e9eefb;
+  color:#26345a}
+
+body[data-theme="light"] .search,body[data-theme="light"] .select {
+  background:#fff;
+  color:var(--text)}
+
+body[data-theme="light"] .tablewrap {
+  background:#fff}
+
+body[data-theme="light"] td:first-child {
+  background:#f7f9fd}
+
+body[data-theme="light"] .side-note {
+  color:#667085}
+
+#themeToggle {
+  min-width:125px;
+  font-weight:650;
+  white-space:nowrap}
+
+#themeToggle:focus-visible {
+  outline:3px solid var(--accent);
+  outline-offset:2px}
+
+@media(max-width:850px) {
+  .app {
+  grid-template-columns:1fr}
+
+.side {
+  position:sticky;
+  top:0;
+  z-index:5;
+  padding:10px 14px;
+  border-right:0;
+  border-bottom:1px solid var(--line)}
+
+.brand {
+  margin:2px 5px 8px}
+
+.nav {
+  display:flex;
+  overflow:auto}
+
+.nav button {
+  white-space:nowrap;
+  padding:8px 11px}
+
+.side-note {
+  display:none}
+
+main {
+  padding:20px 14px}
+
+.cards {
+  grid-template-columns:repeat(2,1fr)}
+
+.grid2 {
+  grid-template-columns:1fr}
+
+.blockgrid {
+  grid-template-columns:1fr}
+
+.top {
+  align-items:flex-start;
+  flex-direction:column}
+
+.actions {
+  width:100%}
+
+}
+
+/* Block planner: aggregated by subject and tier, with no day labels */
+.blockgrid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:stretch;
+  gap:16px}
+
+.blockcard-v2 {
+  padding:0;
+  overflow:hidden;
+  background:var(--panel);
+  border-radius:17px}
+
+.blockcard-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:19px;
+  border-bottom:1px solid var(--line)}
+
+.blockcard-v2 h3 {
+  font-size:21px;
+  margin:3px 0 0}
+
+.block-kicker {
+  font-size:9px;
+  letter-spacing:1.4px;
+  font-weight:800;
+  color:var(--muted)}
+
+.block-count {
+  font-size:11px;
+  font-weight:750;
+  padding:6px 10px;
+  border-radius:99px}
+
+.block-1 .blockcard-head {
+  background:#edf3ff}
+
+.block-1 h3 {
+  color:#4268b2}
+
+.block-1 .block-count {
+  background:#dce8ff;
+  color:#4268b2}
+
+.block-2 .blockcard-head {
+  background:#eaf9f1}
+
+.block-2 h3 {
+  color:#27815e}
+
+.block-2 .block-count {
+  background:#d4f1e2;
+  color:#27815e}
+
+.block-3 .blockcard-head {
+  background:#fff3e6}
+
+.block-3 h3 {
+  color:#ad6c24}
+
+.block-3 .block-count {
+  background:#ffe7ca;
+  color:#ad6c24}
+
+.block-allocation {
+  padding:15px;
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px}
+
+.allocation-subject {
+  border:1px solid transparent;
+  border-radius:12px;
+  padding:11px}
+
+.allocation-subject h4 {
+  font-size:12px;
+  margin:0 0 8px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between}
+
+.allocation-tiers {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px}
+
+.allocation-tier {
+  border-radius:9px;
+  padding:9px;
+  background:#ffffffb8;
+  min-width:0}
+
+.allocation-tier b {
+  font-size:9px;
+  display:block;
+  margin-bottom:5px;
+  letter-spacing:.5px}
+
+.allocation-tier span {
+  font-size:11px;
+  line-height:1.5;
+  overflow-wrap:anywhere;
+  color:#35415a}
+
+.allocation-subject.subject-physics {
+  background:#edf4ff;
+  border-color:#dce8ff}
+
+.allocation-subject.subject-chemistry {
+  background:#edfaf4;
+  border-color:#d9f1e5}
+
+.allocation-subject.subject-maths {
+  background:#fff5e9;
+  border-color:#f7e6cd}
+
+.allocation-subject.subject-physics h4 {
+  color:#4268a9}
+
+.allocation-subject.subject-chemistry h4 {
+  color:#368466}
+
+.allocation-subject.subject-maths h4 {
+  color:#a87335}
+
+body:not([data-theme="light"]) .blockcard-head {
+  filter:brightness(.78)}
+
+body:not([data-theme="light"]) .allocation-tier {
+  background:#ffffff12}
+
+body:not([data-theme="light"]) .allocation-tier span {
+  color:#e4e9f5}
+
+.material-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px}
+
+.material-item {
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--panel2)}
+
+.material-head {
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  font-size:12px;
+  font-weight:700;
+  margin-bottom:7px}
+
+.material-head span:last-child {
+  color:var(--muted);
+  font-weight:600}
+
+.material-track {
+  height:9px;
+  border-radius:99px;
+  background:var(--line);
+  overflow:hidden}
+
+.material-track i {
+  display:block;
+  height:100%;
+  border-radius:99px;
+  background:linear-gradient(90deg,#8da4ff,#55c9a4)}
+
+.subject-detail-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px}
+
+.subject-detail {
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--panel2)}
+
+.subject-detail h4 {
+  margin:0 0 8px;
+  font-size:14px}
+
+.subject-detail p {
+  margin:5px 0;
+  color:var(--muted);
+  font-size:11px}
+
+@media(max-width:900px) {
+  .material-grid,.subject-detail-grid {
+  grid-template-columns:repeat(2,minmax(0,1fr))}
+
+}
+
+@media(max-width:760px) {
+  .blockgrid,.material-grid,.subject-detail-grid {
+  grid-template-columns:1fr}
+
+.allocation-tiers {
+  grid-template-columns:repeat(2,minmax(0,1fr))}
+
+}
+
+.block-intro-top {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:18px;
+  flex-wrap:wrap}
+
+.block-intro h3 {
+  font-size:18px;
+  margin:5px 0}
+
+.block-legend {
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap}
+
+.legend-chip {
+  font-size:10px;
+  font-weight:750;
+  padding:6px 10px;
+  border-radius:99px}
+
+.legend-physics {
+  background:#e7f0ff;
+  color:#315d9e}
+
+.legend-chemistry {
+  background:#e5f7ed;
+  color:#26724f}
+
+.legend-maths {
+  background:#fff0df;
+  color:#9b5b16}
+
+.legend-t1 {
+  background:#f0eaff;
+  color:#6847a6}
+
+.legend-t2 {
+  background:#ffeaf1;
+  color:#a64d70}
+
+/* Planner polish: pastel assignments, subject identities and subtle motion */
+:root {
+  --motion-fast:180ms;
+  --motion-slow:520ms}
+
+.btn,.nav button,.card,.panel,.badge,.allocation-subject,.allocation-tier,.row-select,.select,.search {
+  transition:background-color var(--motion-fast) ease,border-color var(--motion-fast) ease,color var(--motion-fast) ease,transform var(--motion-fast) ease,box-shadow var(--motion-fast) ease}
+
+.card:hover,.panel:hover,.badge:hover {
+  transform:translateY(-2px)}
+
+.blockcard-v2 {
+  box-shadow:0 8px 24px rgba(36,61,110,.07);
+  animation:plannerEnter .55s both}
+
+.blockcard-v2:nth-child(2) {
+  animation-delay:90ms}
+
+.blockcard-v2:nth-child(3) {
+  animation-delay:180ms}
+
+.blockcard-v2:hover {
+  transform:translateY(-4px);
+  box-shadow:0 15px 32px rgba(36,61,110,.13)}
+
+.blockcard-head {
+  position:relative;
+  overflow:hidden}
+
+.blockcard-head:after {
+  content:"";
+  position:absolute;
+  width:140px;
+  height:140px;
+  border-radius:50%;
+  right:-42px;
+  top:-76px;
+  background:#ffffff55;
+  pointer-events:none}
+
+.block-allocation {
+  gap:13px}
+
+.allocation-subject {
+  box-shadow:0 2px 8px rgba(35,55,95,.035);
+  animation:fadeLift .45s both}
+
+.allocation-subject:nth-child(2) {
+  animation-delay:80ms}
+
+.allocation-subject:nth-child(3) {
+  animation-delay:150ms}
+
+.allocation-subject:hover {
+  transform:translateY(-2px);
+  box-shadow:0 7px 16px rgba(35,55,95,.08)}
+
+.allocation-subject h4 {
+  font-size:13px}
+
+.allocation-tier {
+  border:1px solid #ffffffb0;
+  min-height:76px}
+
+.allocation-tier b {
+  display:inline-flex;
+  padding:3px 7px;
+  border-radius:20px;
+  background:#ffffffa8;
+  color:#52617b}
+
+.allocation-tier span {
+  display:block;
+  margin-top:4px}
+
+/* Block and tier dropdowns use the requested pastel palette */
+.row-select {
+  font-weight:650;
+  min-width:74px;
+  max-width:88px;
+  cursor:pointer}
+
+.block-select.b1 {
+  background:#e7f0ff;
+  color:#315d9e;
+  border-color:#c8dcff}
+
+.block-select.b2 {
+  background:#e5f7ed;
+  color:#26724f;
+  border-color:#c6ecd6}
+
+.block-select.b3 {
+  background:#fff0df;
+  color:#9b5b16;
+  border-color:#ffdbb2}
+
+.tier-select.t1 {
+  background:#f0eaff;
+  color:#6847a6;
+  border-color:#dfd1ff}
+
+.tier-select.t2 {
+  background:#ffeaf1;
+  color:#a64d70;
+  border-color:#ffd0df}
+
+.row-select:focus,.select:focus,.search:focus {
+  outline:2px solid #9baeff;
+  outline-offset:2px}
+
+/* Subject planner table identity colours */
+#subject[data-subject="Physics"] .tablewrap {
+  border-color:#c9dcff}
+
+#subject[data-subject="Chemistry"] .tablewrap {
+  border-color:#c8ead9}
+
+#subject[data-subject="Maths"] .tablewrap {
+  border-color:#f5dfc5}
+
+#subject[data-subject="Physics"] th {
+  background:#eaf2ff;
+  color:#315d9e}
+
+#subject[data-subject="Chemistry"] th {
+  background:#e9f8f0;
+  color:#26724f}
+
+#subject[data-subject="Maths"] th {
+  background:#fff3e6;
+  color:#9b5b16}
+
+#subject[data-subject="Physics"] td:first-child {
+  background:#f1f6ff}
+
+#subject[data-subject="Chemistry"] td:first-child {
+  background:#effaf4}
+
+#subject[data-subject="Maths"] td:first-child {
+  background:#fff7ee}
+
+#subject[data-subject="Physics"] .code {
+  color:#426fb5}
+
+#subject[data-subject="Chemistry"] .code {
+  color:#27815e}
+
+#subject[data-subject="Maths"] .code {
+  color:#b8752c}
+
+#subject tbody tr {
+  animation:fadeLift .28s both}
+
+#subject tbody tr:hover td {
+  background:#f5f7ff}
+
+#subject[data-subject="Chemistry"] tbody tr:hover td {
+  background:#f1faf5}
+
+#subject[data-subject="Maths"] tbody tr:hover td {
+  background:#fff8f0}
+
+#subject .check input {
+  transform:scale(1.08)}
+
+#subjectCards .card:nth-child(1) {
+  border-top:3px solid #9bb9ef}
+
+#subjectCards .card:nth-child(2) {
+  border-top:3px solid #91d5b2}
+
+#subjectCards .card:nth-child(3) {
+  border-top:3px solid #f0c28d}
+
+/* Animated progress fills */
+.bar i,.material-track i,.badge-track i {
+  transition:width .65s cubic-bezier(.2,.75,.25,1)}
+
+@keyframes plannerEnter {
+  from {
+  opacity:0;
+  transform:translateY(14px)}
+
+to {
+  opacity:1;
+  transform:translateY(0)}
+
+}
+
+@keyframes fadeLift {
+  from {
+  opacity:0;
+  transform:translateY(7px)}
+
+to {
+  opacity:1;
+  transform:translateY(0)}
+
+}
+
+@media(prefers-reduced-motion:reduce) {
+  *,*:before,*:after {
+  animation-duration:.01ms!important;
+  animation-iteration-count:1!important;
+  scroll-behavior:auto!important;
+  transition-duration:.01ms!important}
+
+}
+
+body[data-theme="light"] .allocation-tier {
+  background:#ffffffd9}
+
+body[data-theme="light"] #subject tbody tr:hover td {
+  background:#f4f7ff}
+
+body:not([data-theme="light"]) #subject th {
+  filter:brightness(.72)}
+
+@media(max-width:760px) {
+  .blockgrid {
+  gap:12px}
+
+.blockcard-head {
+  padding:16px}
+
+.allocation-tier {
+  min-height:0}
+
+}
+
+/* Refined block roadmap: clearer hierarchy, topic chips and live execution pulse */
+.block-intro {
+  position:relative;
+  overflow:hidden;
+  border-color:#cfdcf5;
+  background:linear-gradient(115deg,#fff 0%,#f5f8ff 58%,#f2fbf7 100%)}
+
+.block-intro:after {
+  content:"45";
+  position:absolute;
+  right:24px;
+  top:-32px;
+  font-size:112px;
+  line-height:1;
+  font-weight:900;
+  color:#5267d8;
+  opacity:.055;
+  pointer-events:none}
+
+.block-intro-top {
+  position:relative;
+  z-index:1}
+
+.blockgrid {
+  gap:18px;
+  align-items:start}
+
+.blockcard-v2 {
+  border:1px solid #dce5f3;
+  box-shadow:0 7px 22px rgba(38,62,105,.065);
+  background:#fff;
+  transform:translateZ(0)}
+
+.blockcard-v2:before {
+  content:"";
+  display:block;
+  height:5px;
+  background:linear-gradient(90deg,var(--block-color),transparent)}
+
+.block-1 {
+  --block-color:#8eb8f5}
+
+.block-2 {
+  --block-color:#83d2ac}
+
+.block-3 {
+  --block-color:#f2bd80}
+
+.blockcard-head {
+  padding:17px 18px 15px}
+
+.blockcard-head .block-kicker {
+  display:block;
+  margin-bottom:3px}
+
+.block-count {
+  white-space:nowrap}
+
+.block-live {
+  padding:12px 17px;
+  background:#fbfcff;
+  border-bottom:1px solid #edf1f7}
+
+.block-live-line {
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-size:10px;
+  font-weight:750;
+  color:#65718a;
+  margin-bottom:7px}
+
+.block-live-track {
+  height:7px;
+  border-radius:20px;
+  background:#e9eef7;
+  overflow:hidden}
+
+.block-live-track i {
+  display:block;
+  height:100%;
+  border-radius:20px;
+  background:linear-gradient(90deg,var(--block-color),#9aabea);
+  transition:width .7s ease}
+
+.block-allocation {
+  padding:13px}
+
+.allocation-subject {
+  padding:12px;
+  min-width:0}
+
+.allocation-subject h4 {
+  margin-bottom:10px}
+
+.allocation-subject h4 span {
+  font-size:9px;
+  font-weight:750;
+  padding:4px 7px;
+  border-radius:30px;
+  background:#ffffffb8}
+
+.allocation-tiers {
+  gap:9px}
+
+.allocation-tier {
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  min-height:92px;
+  padding:10px;
+  background:#ffffffc9;
+  border:1px solid #ffffffd9}
+
+.allocation-tier b {
+  margin:0;
+  width:max-content;
+  padding:3px 8px;
+  border-radius:30px;
+  font-size:9px}
+
+.allocation-tier:first-child b {
+  background:#f0eaff;
+  color:#6847a6}
+
+.allocation-tier:last-child b {
+  background:#ffeaf1;
+  color:#a64d70}
+
+.topic-list {
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  align-content:flex-start}
+
+.topic-chip {
+  display:inline-flex;
+  align-items:center;
+  max-width:100%;
+  padding:4px 7px;
+  border-radius:6px;
+  background:#f4f7fc;
+  color:#35415a;
+  font-size:10px;
+  line-height:1.25;
+  overflow-wrap:anywhere;
+  border:1px solid #e8edf5}
+
+.allocation-tier .empty-topic {
+  font-size:10px;
+  color:#8a94a7;
+  font-style:italic}
+
+/* Pastel assignment controls stay pastel in both themes;
+  native option menus match */
+.row-select {
+  min-width:84px;
+  max-width:94px;
+  padding:7px 8px;
+  font-size:11px;
+  font-weight:750;
+  border-width:1px;
+  border-radius:9px;
+  box-shadow:0 1px 2px rgba(30,50,90,.05)}
+
+.block-select.b1,.block-select option[value="B1"] {
+  background-color:#e7f0ff;
+  color:#315d9e;
+  border-color:#c8dcff}
+
+.block-select.b2,.block-select option[value="B2"] {
+  background-color:#e5f7ed;
+  color:#26724f;
+  border-color:#c6ecd6}
+
+.block-select.b3,.block-select option[value="B3"] {
+  background-color:#fff0df;
+  color:#9b5b16;
+  border-color:#ffdbb2}
+
+.tier-select.t1,.tier-select option[value="T1"] {
+  background-color:#f0eaff;
+  color:#6847a6;
+  border-color:#dfd1ff}
+
+.tier-select.t2,.tier-select option[value="T2"] {
+  background-color:#ffeaf1;
+  color:#a64d70;
+  border-color:#ffd0df}
+
+.row-select:not(.b1):not(.b2):not(.b3):not(.t1):not(.t2) {
+  background:#f5f7fb;
+  color:#69758b;
+  border-color:#dfe5ef}
+
+/* Distinct subject identity across the entire chapter planner */
+#subject[data-subject="Physics"] .tablewrap {
+  border:1px solid #c9dcff;
+  box-shadow:0 5px 18px rgba(66,104,169,.06)}
+
+#subject[data-subject="Chemistry"] .tablewrap {
+  border:1px solid #c8ead9;
+  box-shadow:0 5px 18px rgba(54,132,102,.06)}
+
+#subject[data-subject="Maths"] .tablewrap {
+  border:1px solid #f5dfc5;
+  box-shadow:0 5px 18px rgba(168,115,53,.06)}
+
+#subject[data-subject="Physics"] tbody tr:nth-child(even) td {
+  background:#f8fbff}
+
+#subject[data-subject="Chemistry"] tbody tr:nth-child(even) td {
+  background:#f7fcf9}
+
+#subject[data-subject="Maths"] tbody tr:nth-child(even) td {
+  background:#fffbf6}
+
+#subject[data-subject="Physics"] .row-select:focus {
+  outline-color:#8bb5f2}
+
+#subject[data-subject="Chemistry"] .row-select:focus {
+  outline-color:#82cba6}
+
+#subject[data-subject="Maths"] .row-select:focus {
+  outline-color:#e8b778}
+
+#subject .toolbar .select {
+  border-radius:10px;
+  background:#fff;
+  box-shadow:0 2px 8px rgba(30,50,90,.04)}
+
+#subject .check input {
+  accent-color:#6378df;
+  cursor:pointer}
+
+
+
+
+
+/* Gentle motion throughout, with no continuous or distracting movement */
+main>section:not(.hidden) {
+  animation:sectionReveal .32s ease both}
+
+.card,.panel,.blockcard-v2,.allocation-subject,.badge,.btn,.nav button,.row-select {
+  will-change:transform}
+
+#subject tbody tr {
+  transition:background .18s ease,transform .18s ease}
+
+#subject tbody tr:focus-within {
+  outline:2px solid #a9bdf0;
+  outline-offset:-2px}
+
+.check input {
+  transition:transform .16s ease}
+
+.check input:checked {
+  transform:scale(1.22)}
+
+@keyframes sectionReveal {
+  from {
+  opacity:0;
+  transform:translateY(7px)}
+
+to {
+  opacity:1;
+  transform:translateY(0)}
+
+}
+
+@media(hover:hover) and (pointer:fine) {
+  .row-select:hover {
+  transform:translateY(-1px);
+  box-shadow:0 4px 10px rgba(35,55,95,.1)}
+
+.allocation-tier:hover {
+  transform:translateY(-2px)}
+
+.topic-chip:hover {
+  background:#eaf0ff;
+  border-color:#d7e2fa}
+
+}
+
+@media(max-width:1050px) {
+  .blockgrid {
+  grid-template-columns:1fr 1fr}
+
+.blockcard-v2:last-child {
+  grid-column:1/-1}
+
+}
+
+@media(max-width:760px) {
+  .blockgrid {
+  grid-template-columns:1fr}
+
+.blockcard-v2:last-child {
+  grid-column:auto}
+
+.block-intro:after {
+  font-size:76px;
+  right:12px;
+  top:-15px}
+
+.allocation-tier {
+  min-height:76px}
+
+}
+
+@media(prefers-reduced-motion:reduce) {
+  main>section:not(.hidden) {
+  animation:none}
+
+.blockcard-v2,.allocation-subject {
+  animation:none}
+
+}
+
+/* Gamified study layer */
+:root {
+  --motion-fast:.2s;
+  --palette-accent:#8b9cff;
+  --palette-glow:#dce5ff}
+
+.game-cards {
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  margin-top:14px}
+
+.mini-note {
+  font-size:11px;
+  color:var(--muted);
+  margin-top:4px}
+
+.xp-card {
+  border-color:#d7c7ff;
+  background:linear-gradient(135deg,#f2edff,#fff)!important}
+
+.xp-card .metric {
+  color:#7252c7}
+
+.section-heading {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px}
+
+.mastery-panel,.heat-panel {
+  margin:14px 0}
+
+.mastery-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px}
+
+.mastery-item {
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--panel2);
+  min-width:0}
+
+.mastery-top {
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  font-weight:700;
+  font-size:12px}
+
+.mastery-level {
+  font-size:10px;
+  color:var(--muted);
+  margin:5px 0}
+
+.mastery-track,.quest-track {
+  height:8px;
+  background:var(--line);
+  border-radius:99px;
+  overflow:hidden}
+
+.mastery-track i,.quest-track i {
+  display:block;
+  height:100%;
+  background:linear-gradient(90deg,#a78bfa,#5ec9a8);
+  border-radius:99px;
+  transition:width .45s ease}
+
+.heatmap {
+  display:grid;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+  gap:5px;
+  max-width:520px}
+
+.heat-cell {
+  aspect-ratio:1;
+  border-radius:4px;
+  background:var(--panel2);
+  border:1px solid var(--line);
+  min-width:0}
+
+.heat-cell.heat-1 {
+  background:#d9e7ff;
+  border-color:#c5d9ff}
+
+.heat-cell.heat-2 {
+  background:#a8c8ff;
+  border-color:#91b8fa}
+
+.heat-cell.heat-3 {
+  background:#6c9be9;
+  border-color:#5b8bda}
+
+.heat-cell.heat-4 {
+  background:#456bc0;
+  border-color:#3e61ae}
+
+.heat-legend {
+  display:flex;
+  align-items:center;
+  gap:5px;
+  margin-top:10px;
+  color:var(--muted);
+  font-size:10px}
+
+.heat-legend .heat-cell {
+  width:12px;
+  height:12px;
+  aspect-ratio:1}
+
+.quest-intro {
+  margin-bottom:14px}
+
+.quest-intro h3 {
+  font-size:22px;
+  margin:5px 0}
+
+.quest-date {
+  color:var(--palette-accent);
+  font-weight:750;
+  font-size:12px;
+  margin-top:8px}
+
+.quest-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px}
+
+.quest-card {
+  border:1px solid var(--line);
+  background:var(--panel);
+  border-radius:15px;
+  padding:16px;
+  animation:fadeLift .35s both}
+
+.quest-card:nth-child(2) {
+  animation-delay:70ms}
+
+.quest-card:nth-child(3) {
+  animation-delay:140ms}
+
+.quest-icon {
+  font-size:25px}
+
+.quest-card h4 {
+  margin:7px 0 4px}
+
+.quest-card p {
+  font-size:12px;
+  color:var(--muted);
+  min-height:34px}
+
+.quest-meta {
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  font-size:11px;
+  margin:10px 0 6px}
+
+.quest-reward {
+  color:#a17b21;
+  font-weight:800}
+
+.quest-card.complete {
+  border-color:#66c69b;
+  background:linear-gradient(135deg,var(--panel),#eaf9f1)}
+
+.quest-custom {
+  margin-top:14px}
+
+.trophy-summary {
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin:12px 0}
+
+.trophy-stat {
+  padding:10px 14px;
+  background:var(--panel2);
+  border-radius:10px;
+  font-weight:750}
+
+.theme-options {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+  margin-top:18px}
+
+.theme-swatch {
+  min-height:95px;
+  border-radius:13px;
+  border:2px solid transparent;
+  text-align:left;
+  padding:14px;
+  cursor:pointer;
+  color:#26334d;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  gap:4px;
+  transition:transform .2s,border-color .2s}
+
+.theme-swatch:hover {
+  transform:translateY(-3px)}
+
+.theme-swatch small {
+  font-size:11px;
+  opacity:.8}
+
+.theme-lavender {
+  background:linear-gradient(135deg,#e9e4ff,#dbe7ff)}
+
+.theme-ocean {
+  background:linear-gradient(135deg,#d8f1ff,#d8f8f1)}
+
+.theme-sage {
+  background:linear-gradient(135deg,#e1f3e5,#ccebe0)}
+
+.theme-peach {
+  background:linear-gradient(135deg,#ffe8d9,#ffe0e7)}
+
+.theme-swatch.selected {
+  border-color:var(--palette-accent);
+  box-shadow:0 0 0 3px var(--palette-glow)}
+
+.settings-note {
+  font-size:12px;
+  color:var(--muted);
+  margin-top:18px}
+
+body[data-palette="ocean"] {
+  --accent:#3989c9;
+  --palette-accent:#3989c9;
+  --palette-glow:#d8efff}
+
+body[data-palette="sage"] {
+  --accent:#368a68;
+  --palette-accent:#368a68;
+  --palette-glow:#d8f1e4}
+
+body[data-palette="peach"] {
+  --accent:#d27b55;
+  --palette-accent:#d27b55;
+  --palette-glow:#ffe4d7}
+
+body[data-theme="light"][data-palette="ocean"] {
+  --accent:#287fb8}
+
+body[data-theme="light"][data-palette="sage"] {
+  --accent:#287b58}
+
+body[data-theme="light"][data-palette="peach"] {
+  --accent:#bb6746}
+
+@media(max-width:1000px) {
+  .game-cards {
+  grid-template-columns:repeat(2,minmax(0,1fr))}
+
+.mastery-grid {
+  grid-template-columns:repeat(2,minmax(0,1fr))}
+
+.quest-grid {
+  grid-template-columns:1fr 1fr}
+
+.theme-options {
+  grid-template-columns:repeat(2,minmax(0,1fr))}
+
+}
+
+@media(max-width:650px) {
+  .mastery-grid,.quest-grid {
+  grid-template-columns:1fr}
+
+.heatmap {
+  gap:3px}
+
+.section-heading {
+  flex-direction:column}
+
+}
+
+@media(prefers-reduced-motion:reduce) {
+  .quest-card,.theme-swatch {
+  animation:none;
+  transition:none}
+
+}
+
+.custom-material-manager{display:grid;gap:9px;margin-top:14px}
+.custom-material-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+.custom-material-row span{font-weight:650;overflow-wrap:anywhere}
+.custom-material-row small{display:block;color:var(--muted);font-size:10px;font-weight:500;margin-top:2px}
+.custom-material-empty{padding:14px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:12px}
+@media(max-width:600px){.custom-material-row{align-items:flex-start}}
+
+/* Keep block/tier colour fills contained inside their pill controls. */
+#subject .row-select{box-sizing:border-box;width:84px;min-width:84px;max-width:84px;height:32px;padding:5px 22px 5px 9px;border-radius:999px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background-clip:padding-box;vertical-align:middle;}
+#subject .block-select,#subject .tier-select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 11px) 13px,calc(100% - 7px) 13px;background-size:4px 4px,4px 4px;background-repeat:no-repeat;}
+#subject .row-select option{border-radius:0;}
+
+
+/* Consistent interactive colour feedback for every button. */
+button{transition:background-color .18s ease,color .18s ease,border-color .18s ease,box-shadow .18s ease,transform .18s ease;}
+button:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(64,91,160,.16);}
+button:not(:disabled):active{transform:translateY(0) scale(.98);box-shadow:0 2px 6px rgba(64,91,160,.12);}
+.btn:not(.primary):not(.custom-delete-btn):hover{background:var(--accent);border-color:var(--accent);color:#fff;}
+.btn.primary:hover{filter:brightness(1.09);box-shadow:0 7px 18px rgba(76,101,205,.28);}
+.nav button:hover{background:var(--panel2);color:var(--accent);}
+.nav button.active:hover{background:var(--panel2);color:var(--accent);}
+.theme-swatch:hover{border-color:var(--accent);box-shadow:0 7px 18px rgba(64,91,160,.16);}
+.custom-delete-btn{background:#fff0f0!important;color:#b42335!important;border:1px solid #f2b8bf!important;font-weight:700;}
+.custom-delete-btn:hover{background:#c93648!important;color:#fff!important;border-color:#c93648!important;box-shadow:0 7px 18px rgba(201,54,72,.25)!important;}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:3px;}
+button:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none;}
+
+/* ============================================================
+   ORBIT DESIGN SYSTEM — polished visual layer
+   Motion follows damped-spring easing; celebratory particles
+   accelerate under a gravity-like fall curve. Reduced-motion is
+   respected for accessibility.
+   ============================================================ */
+:root{
+ --radius-card:20px;--radius-control:12px;--radius-pill:999px;
+ --shadow-soft:0 8px 28px rgba(31,49,88,.07);
+ --shadow-hover:0 16px 36px rgba(31,49,88,.13);
+ --motion-spring:cubic-bezier(.18,.82,.22,1);
+ --motion-settle:cubic-bezier(.2,.75,.25,1);
+ --accent:#6578e8;--accent-2:#8f78e8;--green:#28a982;
+}
+body{background:radial-gradient(ellipse at 12% 0%,color-mix(in srgb,var(--accent) 13%,transparent),transparent 34%),radial-gradient(ellipse at 100% 12%,color-mix(in srgb,var(--green) 9%,transparent),transparent 28%),var(--bg);letter-spacing:.005em}
+.app{min-height:100vh}
+.side{background:color-mix(in srgb,var(--panel) 92%,var(--accent) 8%);backdrop-filter:blur(18px);border-right:1px solid color-mix(in srgb,var(--line) 75%,var(--accent) 25%)}
+.brand{font-size:19px;letter-spacing:-.7px;font-weight:900}.brand span{display:block;font-size:9px;letter-spacing:2.1px;margin:3px 0 0;color:var(--muted)}
+.nav{gap:6px}.nav button{border:1px solid transparent;border-radius:12px;font-weight:650;transition:all .24s var(--motion-spring)}
+.nav button.active{background:color-mix(in srgb,var(--accent) 13%,var(--panel2));color:var(--accent);border-color:color-mix(in srgb,var(--accent) 22%,var(--line));box-shadow:inset 3px 0 var(--accent)}
+main{max-width:1600px;padding:34px clamp(18px,3vw,46px)}
+.title{font-size:clamp(26px,3vw,36px);font-weight:850;letter-spacing:-1.3px}
+.eyebrow{letter-spacing:2px;font-size:10px}
+.card,.panel,.blockcard-v2,.quest-card,.badge{border-radius:var(--radius-card);box-shadow:var(--shadow-soft);transition:transform .28s var(--motion-spring),box-shadow .28s var(--motion-spring),border-color .2s ease}
+.card:hover,.panel:hover,.quest-card:hover,.badge:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover)}
+.card{padding:21px}.panel{padding:22px}.metric{font-size:clamp(25px,2.4vw,32px);font-weight:850}
+.btn,.select,.search{border-radius:var(--radius-control);min-height:40px}
+.btn{font-weight:700;transition:transform .24s var(--motion-spring),background .2s ease,color .2s ease,box-shadow .24s ease}
+.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border:0;box-shadow:0 5px 14px color-mix(in srgb,var(--accent) 25%,transparent)}
+.btn.primary:hover{filter:saturate(1.12) brightness(1.04)}
+.btn:not(.primary):not(.custom-delete-btn):hover{background:color-mix(in srgb,var(--accent) 13%,var(--panel));color:var(--accent);border-color:color-mix(in srgb,var(--accent) 38%,var(--line))}
+.custom-delete-btn{border-radius:var(--radius-pill)!important;padding:8px 17px!important;background:#fff0f1!important;color:#b42335!important;border:1px solid #f0b8c0!important}
+.custom-delete-btn:hover{background:#bd3347!important;color:#fff!important;border-color:#bd3347!important;transform:translateY(-2px) scale(1.02)}
+.tablewrap{border-radius:16px;box-shadow:var(--shadow-soft)}
+table{font-size:12.5px}td,th{padding:12px 11px}
+#subject tbody tr{transition:background .2s ease,transform .2s var(--motion-spring)}
+#subject tbody tr:hover{transform:translateX(2px)}
+#subject .row-select{border-radius:var(--radius-pill);font-weight:800;box-shadow:0 2px 5px rgba(25,45,85,.07)}
+.blockcard-v2{border-radius:20px;overflow:hidden}.blockcard-v2:hover{transform:translateY(-5px) scale(1.008);box-shadow:var(--shadow-hover)}
+.quest-card{border-radius:18px}.quest-card.complete{border:1px solid color-mix(in srgb,var(--green) 55%,var(--line));box-shadow:0 8px 22px color-mix(in srgb,var(--green) 10%,transparent)}
+.material-item,.subject-detail,.mastery-item,.custom-material-row{border-radius:14px}
+.material-track,.mastery-track,.quest-track,.badge-track{height:9px;border-radius:var(--radius-pill)}
+.material-track i,.mastery-track i,.quest-track i,.badge-track i{border-radius:var(--radius-pill)}
+.theme-swatch{border-radius:17px;min-height:108px;box-shadow:0 5px 16px rgba(30,50,90,.06)}
+.theme-swatch.selected{transform:translateY(-2px);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 17%,transparent),0 10px 24px rgba(30,50,90,.10)}
+.toast{border-radius:16px;box-shadow:0 18px 48px rgba(10,20,45,.2);backdrop-filter:blur(16px)}
+/* Confetti pop: a small party-popper burst, then gravity-like acceleration. */
+.celebrate{z-index:999;perspective:700px}
+.confetti{width:8px;height:13px;border-radius:3px;box-shadow:0 1px 4px #0002;animation:orbitGravity 1.8s cubic-bezier(.24,.04,.76,.35) forwards;transform-origin:center}
+@keyframes orbitGravity{0%{transform:translate3d(0,-12px,0) rotate(0) scale(.4);opacity:0}10%{opacity:1;transform:translate3d(calc(var(--drift)*-.12),8vh,0) rotate(100deg) scale(1)}100%{transform:translate3d(var(--drift),112vh,0) rotate(900deg) scale(.78);opacity:.08}}
+
+/* ORBIT MEGA CELEBRATION: five launch zones, 240 particles, ballistic arcs + gravity. */
+.celebrate{position:fixed;inset:0;z-index:99999;pointer-events:none;overflow:hidden;contain:layout paint;perspective:900px}
+.confetti{position:absolute;bottom:5vh;width:10px;height:15px;border-radius:3px;box-shadow:0 2px 7px #26345a30;animation:popperFlight var(--duration,5s) cubic-bezier(.18,.62,.25,1) var(--delay,0s) forwards;will-change:transform,opacity}
+.confetti.ribbon{width:6px;height:27px;border-radius:5px}.confetti.dot{width:11px;height:11px;border-radius:50%}.confetti.square{width:12px;height:12px;border-radius:2px}.confetti.diamond{width:13px;height:13px;border-radius:2px;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.confetti.star,.confetti.spark{width:auto;height:auto;background:transparent!important;box-shadow:none;font-size:25px;font-weight:900;line-height:1;text-shadow:0 1px 8px #fff8}
+.confetti.spark{font-size:31px}
+@keyframes popperFlight{0%{transform:translate3d(0,0,0) rotate(0) scale(.25);opacity:0}7%{opacity:1}28%{transform:translate3d(calc(var(--vx)*.52),calc(var(--vy)*.9),0) rotate(calc(var(--spin)*.35)) scale(1.18);opacity:1}58%{transform:translate3d(calc(var(--vx)*.82),calc(var(--vy)*.25 + 34vh),0) rotate(calc(var(--spin)*.7)) scale(1);opacity:.95}100%{transform:translate3d(var(--vx),calc(var(--vy) + 108vh),0) rotate(var(--spin)) scale(.72);opacity:0}}
+@media(prefers-reduced-motion:reduce){.confetti{animation:none!important;display:none!important}}
+
+/* Palette-aware surfaces */
+body[data-palette="lavender"]{--accent:#6e70d8;--accent-2:#9b7be8;--green:#2ba987}
+body[data-palette="ocean"]{--accent:#2688bd;--accent-2:#36b5b0;--green:#279b83}
+body[data-palette="sage"]{--accent:#398b69;--accent-2:#69ae91;--green:#299b72}
+body[data-palette="peach"]{--accent:#cb7654;--accent-2:#e69b70;--green:#3b9d80}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 70%,white);outline-offset:3px}
+::selection{background:color-mix(in srgb,var(--accent) 25%,transparent)}
+@media(max-width:850px){main{padding:20px 14px}.side{backdrop-filter:blur(14px)}.brand{font-size:16px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}.card:hover,.panel:hover,.quest-card:hover,.badge:hover,.blockcard-v2:hover{transform:none}}
+
+</style></head>
+<body>
+  <div class="app">
+    <aside class="side">
+      <div class="brand">✦ ORBIT <span>JEE COMMAND</span>
+    </div>
+    <nav class="nav">
+      <button class="active" data-page="overview">▦ &nbsp; Overview</button>
+      <button data-page="Physics">⚛ &nbsp; Physics</button>
+      <button data-page="Chemistry">◈ &nbsp; Chemistry</button>
+      <button data-page="Maths">∑ &nbsp; Maths</button>
+      <button data-page="blocks">▤ &nbsp; Block plan</button>
+      <button data-page="quests">🎯 &nbsp; Daily quests</button>
+      <button data-page="trophies">🏆 &nbsp; Trophy room</button>
+      <button data-page="settings">⚙ &nbsp; Settings</button>
+    </nav>
+    <div class="side-note">Your progress is saved automatically in this browser.</div>
+  </aside>
+  <main>
+    <header class="top">
+      <div>
+        <div class="eyebrow">JEE MAIN 2027 · YOUR STUDY COMMAND CENTRE</div>
+        <h1 class="title" id="pageTitle">Your command centre</h1>
+        <div class="sub" id="pageSub">Track chapter revision, practice and block-wise execution.</div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="resetData()">Reset progress</button>
+        <button class="btn primary" onclick="downloadData()">Export backup</button>
+      </div>
+    </header>
+    <section id="overview">
+      <div class="cards">
+        <div class="card">
+          <div class="label">TOTAL CHAPTERS</div>
+          <div class="metric" id="total">—</div>
+        </div>
+        <div class="card">
+          <div class="label">TASKS COMPLETED</div>
+          <div class="metric" id="done">—</div>
+        </div>
+        <div class="card">
+          <div class="label">OVERALL COMPLETION</div>
+          <div class="metric" id="overall">—</div>
+        </div>
+        <div class="card">
+          <div class="label">CHAPTERS STARTED</div>
+          <div class="metric" id="started">—</div>
+        </div>
+      </div>
+      <div class="cards game-cards">
+        <div class="card xp-card">
+          <div class="label">TOTAL XP</div>
+          <div class="metric" id="xpTotal">0 XP</div>
+          <div class="mini-note" id="xpHint">Earn XP by completing study materials.</div>
+        </div>
+        <div class="card">
+          <div class="label">CURRENT RANK</div>
+          <div class="metric" id="rankName">New Scholar</div>
+          <div class="mini-note" id="rankHint">Every task moves you forward.</div>
+        </div>
+        <div class="card">
+          <div class="label">PLAYER LEVEL</div>
+          <div class="metric" id="playerLevel">Level 1</div>
+          <div class="mini-note" id="levelProgress">0 / 250 XP to next level</div>
+        </div>
+        <div class="card">
+          <div class="label">CHAPTER MASTERY</div>
+          <div class="metric" id="masteredCount">0</div>
+          <div class="mini-note">Chapters at mastery level 6</div>
+        </div>
+        <div class="card">
+          <div class="label">ACTIVE STREAK</div>
+          <div class="metric" id="streakCount">0 days</div>
+          <div class="mini-note" id="streakHint">Build consistency at your pace.</div>
+        </div>
+      </div>
+      <div class="panel mastery-panel">
+        <div class="section-heading">
+          <div>
+            <h3>🧠 Chapter mastery map</h3>
+            <p class="focus">A chapter moves from not started to mastered as you complete progressively deeper material.</p>
+          </div>
+          <span class="pill">6 mastery levels</span>
+        </div>
+        <div id="masterySummary" class="mastery-grid">
+        </div>
+      </div>
+      <div class="panel heat-panel">
+        <div class="section-heading">
+          <div>
+            <h3>🔥 Study activity</h3>
+            <p class="focus">Your last 35 days of completed tasks. More filled squares mean more activity.</p>
+          </div>
+          <span id="activityTotal" class="pill">0 tasks logged</span>
+        </div>
+        <div id="activityHeatmap" class="heatmap">
+        </div>
+        <div class="heat-legend">
+          <span>Less</span>
+          <i class="heat-cell">
+          </i>
+          <i class="heat-cell heat-2">
+          </i>
+          <i class="heat-cell heat-3">
+          </i>
+          <i class="heat-cell heat-4">
+          </i>
+          <span>More</span>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <h3>Subject-wise progress</h3>
+          <div class="subject-progress" id="subjectBars">
+          </div>
+        </div>
+        <div class="panel">
+          <h3>How to use this tracker</h3>
+          <div class="focus">1. Open a subject and tick each task as you complete it.<br>
+          <br>2. Use search to find a chapter quickly; filter by block or tier.<br>
+          <br>3. Your changes are saved automatically on this device.<br>
+          <br>4. Export a JSON backup periodically so your progress can be restored later.</div>
+        </div>
+      </div>
+      <div class="panel block-analytics-panel">
+        <h3>🧱 Block-wise execution</h3>
+        <div id="blockAnalytics" class="subject-detail-grid">
+        </div>
+      </div>
+      <div class="panel material-panel">
+        <h3>📚 Material-wise completion</h3>
+        <p class="focus">Track how much of each study material is completed across Physics, Chemistry and Maths.</p>
+        <div id="materialBars" class="material-grid">
+        </div>
+      </div>
+      <div class="panel subject-detail-panel">
+        <h3>📊 Subject completion breakdown</h3>
+        <div id="subjectDetails" class="subject-detail-grid">
+        </div>
+      </div>
+      <div class="panel" style="margin-top:14px">
+        <h3>Recently updated chapters</h3>
+        <div id="recent" class="focus">No chapters updated yet. Start by checking off a task.</div>
+      </div>
+      <div class="panel" style="margin-top:14px">
+        <h3>🏆 Sweksha's achievement shelf</h3>
+        <p class="focus" style="margin-top:-8px">Earn badges as you execute your 45-day JEE revision plan.</p>
+        <div id="badgeShelf" class="badge-grid">
+        </div>
+      </div>
+    </section>
+    <section id="subject" class="hidden">
+      <div class="cards" id="subjectCards">
+      </div>
+      <div class="toolbar">
+        <input id="search" class="search" placeholder="Search chapter or code…" oninput="renderTable()">
+        <select id="blockFilter" class="select" onchange="renderTable()">
+          <option value="">All blocks</option>
+          <option>B1</option>
+          <option>B2</option>
+          <option>B3</option>
+        </select>
+        <select id="tierFilter" class="select" onchange="renderTable()">
+          <option value="">All tiers</option>
+          <option>T1</option>
+          <option>T2</option>
+        </select>
+        <button class="btn primary" type="button" onclick="addChapter()">＋ Add chapter</button>
+        <button class="btn" type="button" onclick="addMaterial()">＋ Add material</button>
+        <span class="sub" id="shown"></span>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead id="thead">
+          </thead>
+          <tbody id="tbody">
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section id="blocks" class="hidden">
+      <div class="panel block-intro" style="margin-bottom:15px">
+        <div class="block-intro-top">
+          <div>
+            <span class="block-kicker">YOUR REVISION ROADMAP</span>
+            <h3>Three focused revision blocks</h3>
+            <p class="focus">Every chapter is grouped by subject and tier. Use the pastel-coded allocations as your map while tracking execution in the subject planners.</p>
+          </div>
+          <div class="block-legend">
+            <span class="legend-chip legend-physics">Physics</span>
+            <span class="legend-chip legend-chemistry">Chemistry</span>
+            <span class="legend-chip legend-maths">Maths</span>
+            <span class="legend-chip legend-t1">T1</span>
+            <span class="legend-chip legend-t2">T2</span>
+          </div>
+        </div>
+      </div>
+      <div class="blockgrid" id="blockCards">
+      </div>
+    </section>
+    <section id="quests" class="hidden">
+      <div class="panel quest-intro">
+        <span class="block-kicker">DAILY MISSION BOARD</span>
+        <h3>🎯 Today's quests</h3>
+        <p class="focus">Small, adjustable goals to keep your revision moving. Progress is based on tasks you tick today.</p>
+        <div class="quest-date" id="questDate">
+        </div>
+      </div>
+      <div class="quest-grid" id="questGrid">
+      </div>
+      <div class="panel" style="margin-top:14px"><h3>📅 Weekly challenges</h3><p class="focus">Challenges reset each Monday. Progress is calculated from tasks checked in the current Monday–Sunday week.</p><div id="weeklyChallenges" class="quest-grid"></div></div>
+      <div class="panel quest-custom">
+        <h3>⚙️ Set your daily target</h3>
+        <p class="focus">Choose a realistic number of tasks for the daily completion quest.</p>
+        <div class="toolbar">
+          <label for="dailyTarget">Daily task target</label>
+          <select id="dailyTarget" class="select">
+            <option>3</option>
+            <option selected>5</option>
+            <option>8</option>
+            <option>10</option>
+            <option>12</option>
+          </select>
+          <button class="btn primary" type="button" onclick="saveQuestTarget()">Save target</button>
+        </div>
+      </div>
+    </section>
+    <section id="trophies" class="hidden">
+      <div class="panel">
+        <span class="block-kicker">YOUR PROGRESS COLLECTION</span>
+        <h3>🏆 Trophy room</h3>
+        <p class="focus">Every badge tracks its own progress. Earn them by completing your revision plan, not by rushing.</p>
+        <div class="trophy-summary" id="trophySummary">
+        </div>
+        <div id="trophyShelf" class="badge-grid">
+        </div>
+      </div>
+    </section>
+    <section id="settings" class="hidden">
+      <div class="panel">
+        <span class="block-kicker">MAKE IT YOURS</span>
+        <h3>🎨 Appearance & preferences</h3>
+        <p class="focus">Choose a colour palette. Your study progress remains unchanged.</p>
+        <div class="theme-options">
+          <button class="theme-swatch theme-lavender" data-palette="lavender" type="button">
+            <b>Lavender</b>
+            <small>Cool purple + blue</small>
+          </button>
+          <button class="theme-swatch theme-ocean" data-palette="ocean" type="button">
+            <b>Ocean</b>
+            <small>Blue + aqua</small>
+          </button>
+          <button class="theme-swatch theme-sage" data-palette="sage" type="button">
+            <b>Sage</b>
+            <small>Green + mint</small>
+          </button>
+          <button class="theme-swatch theme-peach" data-palette="peach" type="button">
+            <b>Peach</b>
+            <small>Warm coral + orange</small>
+          </button>
+        </div>
+        <div class="settings-note">The tracker uses a consistent light appearance. Block and tier colours stay consistent across palettes.</div>
+      </div>
+      <div class="panel" style="margin-top:14px">
+        <div class="section-heading">
+          <div>
+            <h3>📚 Manage study materials</h3>
+            <p class="focus">Remove custom materials you no longer use. Built-in tracker materials cannot be deleted.</p>
+          </div>
+          <button class="btn primary" type="button" onclick="addMaterial()">＋ Add material</button>
+        </div>
+        <div id="customMaterialManager" class="custom-material-manager"></div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+const DATA={
+  "subjects": {
+    "Physics": [
+      {
+        "Chapter Code": "AS",
+        "Chapter Name": "Atomic Structure",
+        "Block": "B1",
+        "Tier": "T1",
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "PEE",
+        "Chapter Name": "Photoelectric Effect",
+        "Block": "B1",
+        "Tier": "T1",
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "DNR",
+        "Chapter Name": "Dual Nature of Radiation & Matter",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "NUC",
+        "Chapter Name": "Nuclear Physics",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "CAP",
+        "Chapter Name": "Capacitance",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "CE",
+        "Chapter Name": "Current Electricity",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "RO",
+        "Chapter Name": "Ray Optics",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "KIN",
+        "Chapter Name": "Kinematics",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "ELS",
+        "Chapter Name": "Electrostatics",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "NLM",
+        "Chapter Name": "Newton's Laws of Motion",
+        "Block": "B1",
+        "Tier": "T2",
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "FR",
+        "Chapter Name": "Friction",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "TP",
+        "Chapter Name": "Thermal Physics (Expansion, Calorimetry & Heat Transfer)",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "WEP",
+        "Chapter Name": "Work, Energy & Power",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "CIR",
+        "Chapter Name": "Circular Motion",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "MAG",
+        "Chapter Name": "Magnetism",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "WO",
+        "Chapter Name": "Wave Optics",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "FLD",
+        "Chapter Name": "Fluid Mechanics (Statics & Dynamics)",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "SHM",
+        "Chapter Name": "Simple Harmonic Motion",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "EMW",
+        "Chapter Name": "Electromagnetic Waves",
+        "Block": "B1",
+        "Tier": "T2",
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "ERX",
+        "Chapter Name": "Errors & Experiments",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "SEMI",
+        "Chapter Name": "Semiconductor",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "KTG",
+        "Chapter Name": "Kinetic Theory of Gases",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "TH",
+        "Chapter Name": "Thermodynamics",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "U&D",
+        "Chapter Name": "Units and Dimensions",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "SOP",
+        "Chapter Name": "System of Particles",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "RBD",
+        "Chapter Name": "Rigid Body Dynamics",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "EMI",
+        "Chapter Name": "Electromagnetic Induction",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "ST",
+        "Chapter Name": "Surface Tension",
+        "Block": "B1",
+        "Tier": "T1",
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "VIS",
+        "Chapter Name": "Viscosity",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "ELA",
+        "Chapter Name": "Elasticity",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      }
+    ],
+    "Chemistry": [
+      {
+        "Chapter Code": "AS",
+        "Chapter Name": "Atomic Structure",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "PT",
+        "Chapter Name": "Periodic Table",
+        "Block": "B1",
+        "Tier": "T1",
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "C. Bond",
+        "Chapter Name": "Chemical Bonding",
+        "Block": "B1",
+        "Tier": "T2",
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "GOC",
+        "Chapter Name": "General Organic Chemistry",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "HC",
+        "Chapter Name": "Hydrocarbon",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "THERMO",
+        "Chapter Name": "Thermodynamics",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "ELC",
+        "Chapter Name": "Electrochemistry",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "CK",
+        "Chapter Name": "Chemical Kinetics",
+        "Block": "B1",
+        "Tier": "T1",
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "D&F BLK",
+        "Chapter Name": "D- and F-Block Elements",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "HAL",
+        "Chapter Name": "Halides",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "O2 CCP",
+        "Chapter Name": "Oxygen Containing Carbon Compounds",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "N2 CCP",
+        "Chapter Name": "Nitrogen Containing Carbon Compounds",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "EQ",
+        "Chapter Name": "Equilibrium",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "BCC",
+        "Chapter Name": "Basic Concept of Chemistry",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "RED",
+        "Chapter Name": "Redox",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "LS",
+        "Chapter Name": "Liquid Solution",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "COOD",
+        "Chapter Name": "Coordination Compounds",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "P-BLK",
+        "Chapter Name": "P-Block",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "BIO",
+        "Chapter Name": "Biomolecules",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "D&F BLK",
+        "Chapter Name": "D- and F-Block Elements",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Day": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      }
+    ],
+    "Maths": [
+      {
+        "Chapter Code": "MAT",
+        "Chapter Name": "Matrices",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "DET",
+        "Chapter Name": "Determinants",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "BIN",
+        "Chapter Name": "Binomial Theorem",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "FOM",
+        "Chapter Name": "Fundamentals of Mathematics",
+        "Block": "B1",
+        "Tier": "T2",
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "SRF",
+        "Chapter Name": "Sets, Relations & Functions",
+        "Block": "B1",
+        "Tier": "T2",
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "SEQ",
+        "Chapter Name": "Sequence & Series",
+        "Block": "B1",
+        "Tier": "T1",
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "LCD",
+        "Chapter Name": "Limits, Continuity & Differentiability",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "MOD",
+        "Chapter Name": "Method of Differentiation",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "SL",
+        "Chapter Name": "Straight Line",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "AOD",
+        "Chapter Name": "Application of Derivatives",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "INT",
+        "Chapter Name": "Integral Calculus",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "CIR",
+        "Chapter Name": "Circle",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "DI",
+        "Chapter Name": "Definite Integration",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "DE",
+        "Chapter Name": "Differential Equations",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "QUD",
+        "Chapter Name": "Quadratic Equations",
+        "Block": "B1",
+        "Tier": "T1",
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": true,
+        "Module Notes": true,
+        "Module Examples": true,
+        "Lv 1": true,
+        "Lv 2": true,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "VEC",
+        "Chapter Name": "Vector",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "3D",
+        "Chapter Name": "Three-Dimensional Geometry",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "CPX",
+        "Chapter Name": "Complex Numbers",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "P&C",
+        "Chapter Name": "Permutation & Combinations",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "TRIGO",
+        "Chapter Name": "Trigonometry",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      },
+      {
+        "Chapter Code": "PROB",
+        "Chapter Name": "Probability",
+        "Block": null,
+        "Tier": null,
+        "Start Day": null,
+        "End Date": null,
+        "Theory Revised": false,
+        "Module Notes": false,
+        "Module Examples": false,
+        "Lv 1": false,
+        "Lv 2": false,
+        "Lv 3": false,
+        "Lv 4": false,
+        "PYQs": false,
+        "Challenger": false,
+        "i Practice": false,
+        "Batch Material": false,
+        "Note": null
+      }
+    ]
+  },
+  "blocks": [
+    [
+      "ROW",
+      1.0,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      1.0,
+      "Physics T1",
+      "Physics T2",
+      "Chemistry T1",
+      "Chemistry T2",
+      "Maths T1",
+      "Maths T2"
+    ],
+    [
+      2.0,
+      "AS + PEE + ST",
+      "NLM + EMW",
+      "CK + PT",
+      "C.BOND",
+      "QUD + SEQ",
+      "FOM + SRF"
+    ],
+    [
+      3.0,
+      "CE + CAP",
+      "RO + TE + CAL",
+      "AS",
+      "QA",
+      "SL",
+      "CPX + BIN"
+    ],
+    [
+      4.0,
+      "WEP + CIR + HT",
+      "ELS + GRV + UND",
+      "LS + HC",
+      "HAL",
+      "VEC + 3D",
+      "LCD + MOD"
+    ],
+    [
+      5.0,
+      "SEMI + VIS",
+      "KTG + THR + DNR",
+      "GL + THERMO",
+      "BIO + POC",
+      "AOD",
+      "INT"
+    ],
+    [
+      "ROW",
+      2.0,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      1.0,
+      "Physics T1",
+      "Physics T2",
+      "Chemistry T1",
+      "Chemistry T2",
+      "Maths T1",
+      "Maths T2"
+    ],
+    [
+      2.0,
+      "WO + ELA",
+      "EMI + SHM",
+      "BCC",
+      "d & f BLK",
+      "CIR",
+      "DI + DE"
+    ],
+    [
+      3.0,
+      "MAG + NUC",
+      "FLD + MPM",
+      "N₂ CCP",
+      "COOD",
+      "TRIGO",
+      "P & C"
+    ],
+    [
+      4.0,
+      "WAVE + AC",
+      "KIN + ERR + EXP",
+      "O₂ CCP",
+      "RED + ELC",
+      "MAT + DET",
+      "PROB"
+    ],
+    [
+      "ROW",
+      3.0,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      1.0,
+      "Physics T1",
+      "Physics T2",
+      "Chemistry T1",
+      "Chemistry T2",
+      "Maths T1",
+      "Maths T2"
+    ],
+    [
+      2.0,
+      "SOP",
+      "RBD",
+      "p-BLK",
+      "EQ",
+      "STAT",
+      "CONICS"
+    ]
+  ]
+};
+
+
+// ------------------------------------------------------------
+// 2. TASK DEFINITIONS AND PERSISTED APPLICATION STATE
+// ------------------------------------------------------------
+const DEFAULT_TASKS=['Theory Revised','Module Notes','Module Examples','Lv 1','Lv 2','Lv 3','Lv 4','PYQs','Challenger','i Practice','Batch Material'];
+// Defensive storage reads: a malformed or older local backup should not blank the app.
+function readStoredJSON(key,fallback){try{const raw=localStorage.getItem(key);return raw===null?fallback:JSON.parse(raw)}catch(error){console.warn('Could not read saved data for',key,error);return fallback}}
+let customMaterials=readStoredJSON('jee45customMaterials',[]);
+let customMaterialSubjects=readStoredJSON('jee45customMaterialSubjects',{});
+// Older custom materials had no subject assignment; preserve their legacy visibility.
+customMaterials.forEach(name=>{if(!customMaterialSubjects[name])customMaterialSubjects[name]=['Physics','Chemistry','Maths']});
+let TASKS=[...DEFAULT_TASKS,...customMaterials];
+function taskIndicesFor(subject){return TASKS.map((name,index)=>({name,index})).filter(x=>x.index<DEFAULT_TASKS.length||(customMaterialSubjects[x.name]||[]).includes(subject));}
+function persistMaterials(){localStorage.setItem('jee45customMaterials',JSON.stringify(customMaterials));localStorage.setItem('jee45customMaterialSubjects',JSON.stringify(customMaterialSubjects));}
+let customChapters=readStoredJSON('jee45customChapters',{});
+Object.keys(customChapters).forEach(subject=>{if(DATA.subjects[subject])DATA.subjects[subject].push(...customChapters[subject])});
+let state=readStoredJSON('jee45progress',{}),assignments=readStoredJSON('jee45assignments',{}),unlocked=readStoredJSON('jee45badges',[]),activity=readStoredJSON('jee45activity',{}),current='Physics';
+let dailyTarget=Number(localStorage.getItem('jee45dailyTarget')||5);
+
+
+// ------------------------------------------------------------
+// 3. ACHIEVEMENT DEFINITIONS
+// ------------------------------------------------------------
+const BADGES=[
+{id:'first-step',icon:'🌱',name:'First Spark',desc:'Complete your first revision task.',progress:a=>[a.done,1],test:a=>a.done>=1},
+{id:'five-tasks',icon:'🪄',name:'Warm-Up Win',desc:'Complete 5 tasks.',progress:a=>[a.done,5],test:a=>a.done>=5},
+{id:'ten-tasks',icon:'⚡',name:'Momentum Maker',desc:'Complete 10 tasks.',progress:a=>[a.done,10],test:a=>a.done>=10},
+{id:'twentyfive',icon:'🚴',name:'Revision Rhythm',desc:'Complete 25 tasks.',progress:a=>[a.done,25],test:a=>a.done>=25},
+{id:'fifty-tasks',icon:'🔥',name:'Consistency Engine',desc:'Complete 50 tasks.',progress:a=>[a.done,50],test:a=>a.done>=50},
+{id:'seventyfive',icon:'🏅',name:'75-Task Milestone',desc:'Complete 75 tasks.',progress:a=>[a.done,75],test:a=>a.done>=75},
+{id:'century',icon:'💯',name:'Century Club',desc:'Complete 100 tasks.',progress:a=>[a.done,100],test:a=>a.done>=100},
+{id:'150tasks',icon:'🏆',name:'150 Club',desc:'Complete 150 tasks.',progress:a=>[a.done,150],test:a=>a.done>=150},
+{id:'200tasks',icon:'👑',name:'Double Century',desc:'Complete 200 tasks.',progress:a=>[a.done,200],test:a=>a.done>=200},
+{id:'chapter',icon:'📘',name:'Chapter Conqueror',desc:'Finish every task in one chapter.',progress:a=>[completedChapters(),1],test:a=>completedChapters()>=1},
+{id:'fivechapters',icon:'📚',name:'Chapter Collector',desc:'Finish all tasks in 5 chapters.',progress:a=>[completedChapters(),5],test:a=>completedChapters()>=5},
+{id:'physics',icon:'⚛️',name:'Physics in Motion',desc:'Complete 25 Physics tasks.',progress:a=>[counts('Physics').done,25],test:a=>counts('Physics').done>=25},
+{id:'chemistry',icon:'🧪',name:'Chemistry Catalyst',desc:'Complete 25 Chemistry tasks.',progress:a=>[counts('Chemistry').done,25],test:a=>counts('Chemistry').done>=25},
+{id:'maths',icon:'∑',name:'Maths Momentum',desc:'Complete 25 Maths tasks.',progress:a=>[counts('Maths').done,25],test:a=>counts('Maths').done>=25},
+{id:'physics10',icon:'🛰️',name:'Physics Starter',desc:'Complete 10 Physics tasks.',progress:a=>[counts('Physics').done,10],test:a=>counts('Physics').done>=10},
+{id:'chem10',icon:'⚗️',name:'Chemistry Starter',desc:'Complete 10 Chemistry tasks.',progress:a=>[counts('Chemistry').done,10],test:a=>counts('Chemistry').done>=10},
+{id:'math10',icon:'📐',name:'Maths Starter',desc:'Complete 10 Maths tasks.',progress:a=>[counts('Maths').done,10],test:a=>counts('Maths').done>=10},
+{id:'triple',icon:'🎯',name:'Triple-Subject Discipline',desc:'Complete 10 tasks in every subject.',progress:a=>[Math.min(...Object.keys(DATA.subjects).map(s=>counts(s).done)),10],test:a=>Object.keys(DATA.subjects).every(s=>counts(s).done>=10)},
+{id:'quarter',icon:'🧭',name:'Quarter Waypoint',desc:'Reach 25% overall completion.',progress:a=>[a.total?Math.round(a.done/a.total*100):0,25],test:a=>a.total>0&&a.done/a.total>=.25},
+{id:'halfway',icon:'🚀',name:'Halfway to Mastery',desc:'Reach 50% overall completion.',progress:a=>[a.total?Math.round(a.done/a.total*100):0,50],test:a=>a.total>0&&a.done/a.total>=.5},
+{id:'all-rounder',icon:'🌟',name:'JEE All-Rounder',desc:'Complete 100 tasks and make progress in all subjects.',progress:a=>[Math.min(a.done,100),100],test:a=>a.done>=100&&Object.keys(DATA.subjects).every(s=>counts(s).done>0)},
+{id:'theory',icon:'📝',name:'Concept Builder',desc:'Complete 20 Theory Revised tasks.',progress:a=>[taskCount('Theory Revised'),20],test:a=>taskCount('Theory Revised')>=20},
+{id:'pyq',icon:'🎯',name:'PYQ Hunter',desc:'Complete 25 PYQ tasks.',progress:a=>[taskCount('PYQs'),25],test:a=>taskCount('PYQs')>=25},
+{id:'levelup',icon:'🧠',name:'Level-Up Learner',desc:'Complete 25 Level 1–4 practice tasks.',progress:a=>[levelTaskCount(),25],test:a=>levelTaskCount()>=25},
+{id:'block1',icon:'🧱',name:'Block 1 Breakthrough',desc:'Complete every task in assigned B1 chapters.',progress:a=>blockProgress('B1'),test:a=>completeGroup('B1','block')},
+{id:'block2',icon:'🧱',name:'Block 2 Breakthrough',desc:'Complete every task in assigned B2 chapters.',progress:a=>blockProgress('B2'),test:a=>completeGroup('B2','block')},
+{id:'block3',icon:'🧱',name:'Block 3 Breakthrough',desc:'Complete every task in assigned B3 chapters.',progress:a=>blockProgress('B3'),test:a=>completeGroup('B3','block')},
+{id:'tier1',icon:'🥇',name:'Tier 1 Specialist',desc:'Complete every task in assigned T1 chapters.',progress:a=>tierProgress('T1'),test:a=>completeGroup('T1','tier')},
+{id:'tier2',icon:'🥈',name:'Tier 2 Specialist',desc:'Complete every task in assigned T2 chapters.',progress:a=>tierProgress('T2'),test:a=>completeGroup('T2','tier')},
+{id:'pyq100',icon:'🎯',name:'PYQ Centurion',desc:'Complete 100 PYQ tasks.',progress:a=>[taskCount('PYQs'),100],test:a=>taskCount('PYQs')>=100},
+{id:'theory-all',icon:'📖',name:'Theory Scholar',desc:'Complete Theory Revised for every chapter.',progress:a=>[taskCount('Theory Revised'),Object.values(DATA.subjects).reduce((n,r)=>n+r.length,0)],test:a=>taskCount('Theory Revised')>=Object.values(DATA.subjects).reduce((n,r)=>n+r.length,0)},
+{id:'examples',icon:'🧩',name:'Concept Detective',desc:'Complete 30 Module Examples tasks.',progress:a=>[taskCount('Module Examples'),30],test:a=>taskCount('Module Examples')>=30},
+{id:'level1',icon:'🏗️',name:'Foundation Builder',desc:'Complete 30 Level 1 tasks.',progress:a=>[taskCount('Lv 1'),30],test:a=>taskCount('Lv 1')>=30},
+{id:'advanced',icon:'🚀',name:'Advanced Explorer',desc:'Complete 30 Level 3 tasks.',progress:a=>[taskCount('Lv 3'),30],test:a=>taskCount('Lv 3')>=30},
+{id:'rainbow',icon:'🌈',name:'Rainbow Scholar',desc:'Complete 5 tasks in each subject.',progress:a=>[Math.min(...Object.keys(DATA.subjects).map(s=>counts(s).done)),5],test:a=>Object.keys(DATA.subjects).every(s=>counts(s).done>=5)},
+{id:'xp500',icon:'✨',name:'XP Collector',desc:'Earn 500 XP from completed materials.',progress:a=>[Math.min(xpTotal(),500),500],test:a=>xpTotal()>=500},
+{id:'xp1500',icon:'💎',name:'XP Elite',desc:'Earn 1,500 XP from completed materials.',progress:a=>[Math.min(xpTotal(),1500),1500],test:a=>xpTotal()>=1500},
+{id:'mastery3',icon:'🧠',name:'Deep Understanding',desc:'Master 3 complete chapters.',progress:a=>[completedChapters(),3],test:a=>completedChapters()>=3},
+{id:'dailyquests',icon:'🎯',name:'Quest Completer',desc:'Complete all three daily quests on one day.',progress:a=>{let d=completedToday(),s=Object.keys(DATA.subjects).filter(x=>d.some(k=>k.startsWith(x+'_'))).length,p=d.some(k=>k.endsWith('_'+TASKS.indexOf('PYQs')))?1:0;return [Math.min(d.length,dailyTarget)>=dailyTarget&&s===3&&p===1?1:0,1]},test:a=>{let d=completedToday();return d.length>=dailyTarget&&Object.keys(DATA.subjects).every(x=>d.some(k=>k.startsWith(x+'_')))&&d.some(k=>k.endsWith('_'+TASKS.indexOf('PYQs')))}}
+];
+
+
+// ORBIT uses a single, consistent light appearance.
+function applyTheme(){document.body.dataset.theme='light';localStorage.setItem('jee45theme','light')}
+applyTheme();
+const savedPalette=localStorage.getItem('jee45palette')||'lavender';document.body.dataset.palette=savedPalette;
+
+
+// Application function: key
+function key(s,i,t){return s+'_'+i+'_'+t}
+
+
+// Application function: rowBlock
+function rowBlock(s,i,r){return assignments[s+'_'+i]?.block??r.Block??''}
+
+
+// Application function: rowTier
+function rowTier(s,i,r){return assignments[s+'_'+i]?.tier??r.Tier??''}
+
+
+// Application function: setAssignment
+function setAssignment(s,i,field,value){let k=s+'_'+i;assignments[k]=assignments[k]||{};assignments[k][field]=value;localStorage.setItem('jee45assignments',JSON.stringify(assignments));renderTable()}
+
+
+// Application function: isDone
+function isDone(s,i,t,row){let k=key(s,i,t);return state[k]!==undefined?state[k]:row[TASKS[t]]===true}
+
+
+// Application function: counts
+function counts(s){let rows=DATA.subjects[s],tasks=taskIndicesFor(s),done=0,total=rows.length*tasks.length,started=0;rows.forEach((r,i)=>{let n=tasks.filter(x=>isDone(s,i,x.index,r)).length;done+=n;if(n)started++});return {done,total,started,chapters:rows.length,pct:total?Math.round(done/total*100):0}}
+
+
+// Application function: all
+function all(){let c=Object.keys(DATA.subjects).map(counts);return {done:c.reduce((a,x)=>a+x.done,0),total:c.reduce((a,x)=>a+x.total,0),chapters:c.reduce((a,x)=>a+x.chapters,0),started:c.reduce((a,x)=>a+x.started,0)}}
+
+
+// Application function: save
+function save(){localStorage.setItem('jee45progress',JSON.stringify(state));refresh()}
+const XP_VALUES={'Theory Revised':10,'Module Notes':10,'Module Examples':15,'Lv 1':10,'Lv 2':15,'Lv 3':20,'Lv 4':25,'PYQs':25,'Challenger':30,'i Practice':20,'Batch Material':15};
+
+
+// Application function: todayKey
+function todayKey(d=new Date()){return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')}
+
+
+// Application function: completedToday
+function completedToday(){return activity[todayKey()]||[]}
+
+
+// Application function: questBonusXP
+function questBonusXP(){let bonus=0;Object.entries(activity).forEach(([day,keys])=>{let n=keys.length,subjects=Object.keys(DATA.subjects).filter(s=>keys.some(k=>k.startsWith(s+'_'))).length,hasPyq=keys.some(k=>k.endsWith('_'+TASKS.indexOf('PYQs')));if(n>=dailyTarget)bonus+=50;if(subjects===3)bonus+=60;if(hasPyq)bonus+=30});return bonus}
+
+
+// Application function: xpTotal
+function xpTotal(){let sum=0;Object.keys(DATA.subjects).forEach(s=>DATA.subjects[s].forEach((r,i)=>taskIndicesFor(s).forEach(({name,index})=>{if(isDone(s,i,index,r))sum+=XP_VALUES[name]||10})));return sum+questBonusXP()+weeklyChallengeBonus()}
+
+
+// Application function: rankFor
+function rankFor(xp){let ranks=[['New Scholar',0],['Focused Learner',100],['Concept Explorer',300],['Problem Solver',650],['Revision Strategist',1100],['JEE Warrior',1800],['Mastermind',2800],['Legendary Scholar',4200]];let rank=ranks[0];ranks.forEach(r=>{if(xp>=r[1])rank=r});return rank[0]}
+
+
+// Application function: masteryFor
+function masteryFor(s,i,r){let done=t=>isDone(s,i,TASKS.indexOf(t),r),n=taskIndicesFor(s).filter(x=>isDone(s,i,x.index,r)).length;if(!n)return 0;let level=1;if(done('Module Notes')&&done('Module Examples'))level=2;if(done('Lv 1'))level=3;if(done('Lv 2'))level=4;if(done('PYQs'))level=5;if(done('Lv 3')&&done('Lv 4')&&(done('Challenger')||done('i Practice')))level=6;return level}
+
+
+// Application function: masteryLabel
+function masteryLabel(l){return ['Not started','Theory started','Concept foundation','Basic practice','Intermediate practice','PYQ ready','Chapter mastered'][l]}
+
+
+// Application function: streakLength
+function streakLength(){let d=new Date(),n=0;for(let k=0;k<366;k++){let key=todayKey(d);if((activity[key]||[]).length){n++;d.setDate(d.getDate()-1)}else if(k===0){d.setDate(d.getDate()-1);if(!(activity[todayKey(d)]||[]).length)break}else break}return n}
+
+
+// Application function: recordActivity
+function recordActivity(s,i,t,v){let day=todayKey(),k=key(s,i,t),arr=activity[day]||[];if(v&&!arr.includes(k))arr.push(k);if(!v)arr=arr.filter(x=>x!==k);activity[day]=arr;localStorage.setItem('jee45activity',JSON.stringify(activity))}
+
+
+// Application function: renderGamification
+function renderGamification(){let xp=xpTotal(),rank=rankFor(xp),mastered=completedChapters();document.getElementById('xpTotal').textContent=xp.toLocaleString()+' XP';let level=Math.floor(xp/250)+1,into=xp%250;document.getElementById('playerLevel').textContent='Level '+level;document.getElementById('levelProgress').textContent=into+' / 250 XP to next level';document.getElementById('rankName').textContent=rank;document.getElementById('rankHint').textContent='Next level milestone: '+([100,300,650,1100,1800,2800,4200].find(x=>x>xp)||'Top rank');document.getElementById('masteredCount').textContent=mastered;document.getElementById('streakCount').textContent=streakLength()+' days';document.getElementById('streakHint').textContent=streakLength()?'Keep your pace steady.':'Your first active day starts your streak.';renderMastery();renderHeatmap();}
+
+
+// Application function: renderMastery
+function renderMastery(){let el=document.getElementById('masterySummary');if(!el)return;let cards=[];Object.keys(DATA.subjects).forEach(s=>DATA.subjects[s].forEach((r,i)=>{let l=masteryFor(s,i,r);cards.push({s,r,l,i})}));el.innerHTML=cards.map(x=>`<div class="mastery-item"><div class="mastery-top"><span>${escapeHtml(x.s)} · ${escapeHtml(x.r['Chapter Code'])}</span><span>Lv ${x.l}/6</span></div><div class="mastery-level">${escapeHtml(x.r['Chapter Name'])} · ${masteryLabel(x.l)}</div><div class="mastery-track"><i style="width:${Math.round(x.l/6*100)}%"></i></div></div>`).join('')}
+
+
+// Application function: renderHeatmap
+function renderHeatmap(){let el=document.getElementById('activityHeatmap');if(!el)return;let d=new Date();d.setDate(d.getDate()-34);let total=0,html='';for(let i=0;i<35;i++){let k=todayKey(d),n=(activity[k]||[]).length;total+=n;let level=n===0?0:n<=2?1:n<=4?2:n<=7?3:4;html+=`<div class="heat-cell ${level?'heat-'+level:''}" title="${k}: ${n} completed tasks" aria-label="${k}: ${n} completed tasks"></div>`;d.setDate(d.getDate()+1)}el.innerHTML=html;document.getElementById('activityTotal').textContent=total+' tasks logged'}
+
+
+// Application function: renderQuests
+function renderQuests(){let el=document.getElementById('questGrid');if(!el)return;let done=completedToday(),total=done.length,subjectDone=Object.keys(DATA.subjects).map(s=>done.filter(k=>k.startsWith(s+'_')).length),pyq=done.filter(k=>k.endsWith('_'+TASKS.indexOf('PYQs'))).length;let quests=[{icon:'⚡',name:'Daily momentum',desc:`Complete ${dailyTarget} study tasks today.`,value:Math.min(total,dailyTarget),target:dailyTarget,reward:50},{icon:'🌈',name:'Three-subject touch',desc:'Complete at least one task in Physics, Chemistry and Maths.',value:subjectDone.filter(n=>n>0).length,target:3,reward:60},{icon:'🎯',name:'PYQ practice',desc:'Complete 1 PYQ task today.',value:Math.min(pyq,1),target:1,reward:30}];el.innerHTML=quests.map(q=>{let pct=Math.round(q.value/q.target*100),complete=q.value>=q.target;return `<article class="quest-card ${complete?'complete':''}"><div class="quest-icon">${q.icon}</div><h4>${q.name} ${complete?'✓':''}</h4><p>${q.desc}</p><div class="quest-meta"><span>${q.value}/${q.target} completed</span><span class="quest-reward">+${q.reward} XP</span></div><div class="quest-track"><i style="width:${pct}%"></i></div><small class="focus">${complete?'Quest complete!':'In progress'}</small></article>`}).join('');document.getElementById('questDate').textContent=new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});document.getElementById('dailyTarget').value=String(dailyTarget);renderWeeklyChallenges()}
+
+
+// Application function: saveQuestTarget
+function saveQuestTarget(){dailyTarget=Number(document.getElementById('dailyTarget').value)||5;localStorage.setItem('jee45dailyTarget',String(dailyTarget));renderQuests();showToast('Daily target updated',`Your daily task goal is now ${dailyTarget}.`)}
+
+
+// Application function: renderTrophyRoom
+function renderTrophyRoom(){let a=all(),earned=BADGES.filter(b=>unlocked.includes(b.id)||b.test(a)).length;document.getElementById('trophySummary').innerHTML=`<span class="trophy-stat">🏆 ${earned} / ${BADGES.length} badges unlocked</span><span class="trophy-stat">✨ ${xpTotal().toLocaleString()} XP earned</span>`;document.getElementById('trophyShelf').innerHTML=document.getElementById('badgeShelf').innerHTML}
+
+
+// Application function: setPalette
+function setPalette(palette){if(!['lavender','ocean','sage','peach'].includes(palette))return;document.body.dataset.palette=palette;localStorage.setItem('jee45palette',palette);document.querySelectorAll('.theme-swatch').forEach(b=>b.classList.toggle('selected',b.dataset.palette===palette))}
+
+
+// Application function: refresh
+function refresh(){let a=all();document.getElementById('total').textContent=a.chapters;document.getElementById('done').textContent=a.done.toLocaleString()+' / '+a.total.toLocaleString();document.getElementById('overall').textContent=(a.total?Math.round(a.done/a.total*100):0)+'%';document.getElementById('started').textContent=a.started;
+document.getElementById('subjectBars').innerHTML=Object.keys(DATA.subjects).map(s=>{let c=counts(s);return `<div class="rowline"><b>${s}</b><div class="bar"><i style="width:${c.pct}%"></i></div><span>${c.pct}%</span></div>`}).join('');
+renderMaterialProgress();renderSubjectDetails();renderBlockAnalytics();renderGamification();renderQuests();renderTrophyRoom();
+let recent=Object.keys(state).filter(k=>state[k]===true).slice(-5);document.getElementById('recent').textContent=recent.length?recent.map(k=>{let [s,i,t]=k.split('_');return `${s}: ${DATA.subjects[s]?.[+i]?.['Chapter Name']||''} — ${TASKS[+t]}`}).reverse().join('  ·  '):'No chapters updated yet. Start by checking off a task.';
+if(!document.getElementById('subject').classList.contains('hidden')){subjectSummary();renderTable()}renderBadges()}
+
+
+// Application function: subjectSummary
+function subjectSummary(){let c=counts(current);document.getElementById('subjectCards').innerHTML=[['CHAPTERS',c.chapters],['TASKS DONE',c.done+' / '+c.total],['COMPLETION',c.pct+'%']].map(x=>`<div class="card"><div class="label">${x[0]}</div><div class="metric">${x[1]}</div></div>`).join('')}
+
+
+// Application function: renderTable
+function renderTable(){let rows=DATA.subjects[current],q=document.getElementById('search').value.toLowerCase(),b=document.getElementById('blockFilter').value,tier=document.getElementById('tierFilter').value;let subjectTasks=taskIndicesFor(current);
+let filtered=rows.map((r,i)=>({r,i})).filter(x=>(!q||(String(x.r['Chapter Name']).toLowerCase().includes(q)||String(x.r['Chapter Code']).toLowerCase().includes(q)))&&(!b||rowBlock(current,x.i,x.r)===b)&&(!tier||rowTier(current,x.i,x.r)===tier));
+document.getElementById('shown').textContent=`${filtered.length} of ${rows.length} chapters`;
+document.getElementById('thead').innerHTML='<tr><th>CODE</th><th>CHAPTER</th><th>BLOCK</th><th>TIER</th>'+subjectTasks.map(x=>`<th>${escapeHtml(x.name)}</th>`).join('')+'<th>PROGRESS</th><th>MANAGE</th></tr>';
+document.getElementById('tbody').innerHTML=filtered.map(({r,i})=>{let n=subjectTasks.filter(x=>isDone(current,i,x.index,r)).length,p=Math.round(n/subjectTasks.length*100);return `<tr><td class="code">${r['Chapter Code']||'—'}</td><td class="chapter">${r['Chapter Name']}</td><td><select class="row-select block-select ${rowBlock(current,i,r).toLowerCase()}" aria-label="Assign block for ${r['Chapter Name']}" onchange="setAssignment('${current}',${i},'block',this.value)"><option value="">Unassigned</option>${['B1','B2','B3'].map(v=>`<option value="${v}" ${rowBlock(current,i,r)===v?'selected':''}>${v}</option>`).join('')}</select></td><td><select class="row-select tier-select ${rowTier(current,i,r).toLowerCase()}" aria-label="Assign tier for ${r['Chapter Name']}" onchange="setAssignment('${current}',${i},'tier',this.value)"><option value="">Unassigned</option>${['T1','T2'].map(v=>`<option value="${v}" ${rowTier(current,i,r)===v?'selected':''}>${v}</option>`).join('')}</select></td>${subjectTasks.map(({name,index})=>`<td class="check"><input type="checkbox" aria-label="${escapeHtml(name)}" ${isDone(current,i,index,r)?'checked':''} onchange="toggle('${current}',${i},${index},this.checked)"></td>`).join('')}<td><div style="display:flex;align-items:center;gap:8px"><div class="bar" style="width:55px"><i style="width:${p}%"></i></div>${p}%</div></td><td>${r.Custom?`<button class="btn" type="button" onclick="editChapter('${current}',${i})">Edit</button> <button class="btn" type="button" onclick="deleteChapter('${current}',${i})">Delete</button>`:'—'}</td></tr>`}).join('')||'<tr><td colspan="17" class="empty">No matching chapters.</td></tr>'}
+
+
+// Custom content tools: additions are stored separately from the built-in syllabus.
+function persistCustomChapters(){const out={};Object.keys(DATA.subjects).forEach(s=>{out[s]=DATA.subjects[s].filter(r=>r.Custom)});localStorage.setItem('jee45customChapters',JSON.stringify(out))}
+function addChapter(){const name=prompt('Chapter name:');if(!name||!name.trim())return;const code=(prompt('Short chapter code (optional):')||'CUSTOM').trim().toUpperCase();const block=prompt('Assign block: B1, B2 or B3','B1');if(block===null)return;if(!['B1','B2','B3'].includes(block.trim().toUpperCase())){alert('Block must be B1, B2 or B3.');return}const tier=prompt('Assign tier: T1 or T2','T1');if(tier===null)return;if(!['T1','T2'].includes(tier.trim().toUpperCase())){alert('Tier must be T1 or T2.');return}const row={'Chapter Code':code,'Chapter Name':name.trim(),'Block':block.trim().toUpperCase(),'Tier':tier.trim().toUpperCase(),'Start Day':null,'End Day':null,'Note':null,'Custom':true};TASKS.forEach(t=>row[t]=false);DATA.subjects[current].push(row);persistCustomChapters();subjectSummary();renderTable();refresh();showToast('Chapter added',name.trim()+' was added to '+current+'.')}
+function editChapter(subject,index){const row=DATA.subjects[subject][index];if(!row?.Custom)return;const name=prompt('Edit chapter name:',row['Chapter Name']);if(name===null)return;if(!name.trim())return alert('Chapter name cannot be empty.');const code=prompt('Edit chapter code:',row['Chapter Code']||'');if(code===null)return;row['Chapter Name']=name.trim();row['Chapter Code']=code.trim();persistCustomChapters();renderTable();refresh()}
+function deleteChapter(subject,index){const row=DATA.subjects[subject][index];if(!row?.Custom||!confirm('Delete "'+row['Chapter Name']+'" and its saved progress?'))return;const oldIndex=index;DATA.subjects[subject].splice(index,1);const remap=obj=>{const next={};Object.entries(obj).forEach(([k,v])=>{const m=k.match(new RegExp('^'+subject+'_([0-9]+)_(.+)$'));if(!m){next[k]=v;return}const n=+m[1];if(n===oldIndex)return;next[subject+'_'+(n>oldIndex?n-1:n)+'_'+m[2]]=v});return next};state=remap(state);assignments=remap(assignments);Object.keys(activity).forEach(day=>{activity[day]=activity[day].filter(k=>{const m=k.match(new RegExp('^'+subject+'_([0-9]+)_(.+)$'));return !m||+m[1]!==oldIndex}).map(k=>{const m=k.match(new RegExp('^'+subject+'_([0-9]+)_(.+)$'));return m&&+m[1]>oldIndex?subject+'_'+(+m[1]-1)+'_'+m[2]:k})});localStorage.setItem('jee45progress',JSON.stringify(state));localStorage.setItem('jee45assignments',JSON.stringify(assignments));localStorage.setItem('jee45activity',JSON.stringify(activity));persistCustomChapters();refresh();showToast('Chapter deleted','The custom chapter and its progress were removed.')}
+function addMaterial(){
+ let subject=current;
+ if(document.getElementById('subject').classList.contains('hidden')){
+  subject=prompt('Add this material to which subject? Enter Physics, Chemistry or Maths:','Physics');
+  if(subject===null)return;subject=subject.trim();
+ }
+ const canonical=Object.keys(DATA.subjects).find(x=>x.toLowerCase()===subject.toLowerCase());
+ if(!canonical)return alert('Please enter Physics, Chemistry or Maths.');
+ const name=prompt('Name of new study material (e.g. DPP, NCERT, Test Series):');
+ if(!name||!name.trim())return;const clean=name.trim();
+ if(TASKS.some(t=>t.toLowerCase()===clean.toLowerCase()))return alert('A material with this name already exists.');
+ customMaterials.push(clean);customMaterialSubjects[clean]=[canonical];TASKS.push(clean);persistMaterials();
+ refresh();if(!document.getElementById('subject').classList.contains('hidden'))renderTable();renderCustomMaterialManager();
+ showToast('Material added',clean+' was added only to '+canonical+'.');
+}
+function renderCustomMaterialManager(){
+ const el=document.getElementById('customMaterialManager');if(!el)return;
+ if(!customMaterials.length){el.innerHTML='<div class="custom-material-empty">No custom materials added yet. Use “Add material” to create one.</div>';return}
+ el.innerHTML=customMaterials.map((name,index)=>{const subjects=customMaterialSubjects[name]||[];return `<div class="custom-material-row"><div><span>${escapeHtml(name)}</span><small>Custom material · ${escapeHtml(subjects.join(', ')||'No subject assigned')}</small></div><button class="btn custom-delete-btn" type="button" onclick="deleteMaterialByIndex(${index})" aria-label="Delete ${escapeHtml(name)}">Delete</button></div>`}).join('');
+}
+function escapeHtml(value){return String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
+function deleteMaterialByIndex(index){const name=customMaterials[index];if(name!==undefined)deleteMaterial(name);}
+function deleteMaterial(name){
+ const taskIndex=TASKS.indexOf(name);if(taskIndex<DEFAULT_TASKS.length||!customMaterials.includes(name))return;
+ const owners=customMaterialSubjects[name]||[];
+ if(!confirm('Delete the custom material “'+name+'” from '+owners.join(', ')+'? Its completion records for those subjects will also be removed.'))return;
+ const remap=obj=>{const next={};Object.entries(obj).forEach(([k,v])=>{const m=k.match(/^(.+)_([0-9]+)_([0-9]+)$/);if(!m){next[k]=v;return}const idx=+m[3];if(idx===taskIndex)return;next[k.slice(0,k.lastIndexOf('_')+1)+(idx>taskIndex?idx-1:idx)]=v});return next};
+ state=remap(state);Object.keys(activity).forEach(day=>{activity[day]=activity[day].filter(k=>{const m=k.match(/^(.+)_([0-9]+)_([0-9]+)$/);return !m||+m[3]!==taskIndex}).map(k=>{const m=k.match(/^(.+)_([0-9]+)_([0-9]+)$/);return m&&+m[3]>taskIndex?k.slice(0,k.lastIndexOf('_')+1)+(+m[3]-1):k})});
+ customMaterials=customMaterials.filter(x=>x!==name);delete customMaterialSubjects[name];TASKS.splice(taskIndex,1);persistMaterials();
+ localStorage.setItem('jee45progress',JSON.stringify(state));localStorage.setItem('jee45activity',JSON.stringify(activity));refresh();renderCustomMaterialManager();if(!document.getElementById('subject').classList.contains('hidden'))renderTable();
+ showToast('Material deleted',name+' was removed from its assigned subject only.');
+}
+
+// Application function: toggle
+function toggle(s,i,t,v){let before=all();state[key(s,i,t)]=v;recordActivity(s,i,t,v);save();if(v){celebrate();checkBadges(before)}}
+
+
+// Application function: celebrate
+function celebrate(){
+ const layer=document.createElement('div');
+ layer.className='celebrate';
+ layer.setAttribute('aria-hidden','true');
+ const palettes={
+  lavender:['#6e70d8','#9b7be8','#c7a6ff','#f06f9b','#ffc1d5','#f2d36b','#69b9e8'],
+  ocean:['#2688bd','#36b5b0','#75d7df','#f2d36b','#f39b72','#7c8fe8','#b5e8f0'],
+  sage:['#398b69','#69ae91','#a8d8b9','#e8c66a','#e89a83','#7ba9ce','#d8edc9'],
+  peach:['#cb7654','#e69b70','#f5c27b','#e77d91','#8fb7d8','#b89ae8','#f7d9b8']
+ };
+ const palette=palettes[document.body.dataset.palette]||palettes.lavender;
+ const shapes=['ribbon','dot','square','diamond','star','spark'];
+ const zones=[8,29,50,71,92];
+ // Five simultaneous launch zones; 48 particles per zone = 240 particles.
+ zones.forEach((x,zone)=>{
+  for(let i=0;i<48;i++){
+   const piece=document.createElement('i');
+   const shape=shapes[(i+zone)%shapes.length];
+   piece.className='confetti '+shape;
+   if(shape==='star'||shape==='spark')piece.textContent=shape==='star'?'✦':'✧';
+   const direction=x<50?1:-1;
+   const horizontal=(Math.random()*360+70)*direction*(.45+Math.random()*.8);
+   const upward=-(Math.random()*420+300);
+   const spin=Math.random()*1440-720;
+   piece.style.left=x+'%';
+   piece.style.bottom=(4+Math.random()*7)+'vh';
+   piece.style.setProperty('--vx',horizontal+'px');
+   piece.style.setProperty('--vy',upward+'px');
+   piece.style.setProperty('--spin',spin+'deg');
+   piece.style.setProperty('--delay',(Math.random()*.28)+'s');
+   piece.style.setProperty('--duration',(4.6+Math.random()*.65)+'s');
+   piece.style.background=palette[Math.floor(Math.random()*palette.length)];
+   piece.style.color=palette[(Math.floor(Math.random()*palette.length)+2)%palette.length];
+   piece.style.opacity=String(.82+Math.random()*.18);
+   layer.appendChild(piece);
+  }
+ });
+ document.body.appendChild(layer);
+ window.setTimeout(()=>layer.remove(),5700);
+}
+
+// Application function: completedChapters
+function completedChapters(){let n=0;Object.keys(DATA.subjects).forEach(s=>DATA.subjects[s].forEach((r,i)=>{if(taskIndicesFor(s).every(x=>isDone(s,i,x.index,r)))n++}));return n}
+
+
+// Application function: taskCount
+function taskCount(task){let n=0,j=TASKS.indexOf(task);if(j<0)return 0;Object.keys(DATA.subjects).forEach(s=>{if(!taskIndicesFor(s).some(x=>x.index===j))return;DATA.subjects[s].forEach((r,i)=>{if(isDone(s,i,j,r))n++})});return n}
+
+
+// Application function: levelTaskCount
+function levelTaskCount(){return ['Lv 1','Lv 2','Lv 3','Lv 4'].reduce((n,t)=>n+taskCount(t),0)}
+
+
+// Application function: groupProgress
+function groupProgress(value,field){let done=0,total=0;Object.keys(DATA.subjects).forEach(s=>DATA.subjects[s].forEach((r,i)=>{let assigned=field==='block'?rowBlock(s,i,r):rowTier(s,i,r);if(assigned===value)taskIndicesFor(s).forEach(({index})=>{total++;if(isDone(s,i,index,r))done++})}));return [done,total]}
+
+
+// Application function: blockProgress
+function blockProgress(v){return groupProgress(v,'block')} 
+
+// Application function: tierProgress
+function tierProgress(v){return groupProgress(v,'tier')}
+
+
+// Application function: completeGroup
+function completeGroup(v,field){let [d,t]=groupProgress(v,field);return t>0&&d===t}
+
+
+// Application function: checkBadges
+function checkBadges(before){let a=all(),fresh=BADGES.filter(b=>b.test(a)&&!unlocked.includes(b.id));if(fresh.length){fresh.forEach(b=>unlocked.push(b.id));localStorage.setItem('jee45badges',JSON.stringify(unlocked));renderBadges();fresh.forEach((b,i)=>setTimeout(()=>showToast('🏆 Badge unlocked: '+b.name,b.desc),i*450))}}
+
+
+// Application function: showToast
+function showToast(title,desc){let el=document.createElement('div');el.className='toast';let strong=document.createElement('strong'),span=document.createElement('span');strong.textContent=String(title);span.textContent=String(desc);el.append(strong,span);document.body.appendChild(el);setTimeout(()=>el.remove(),3400)}
+
+
+// Application function: renderBadges
+function renderBadges(){let shelf=document.getElementById('badgeShelf');if(!shelf)return;let a=all();shelf.innerHTML=BADGES.map(b=>{let pair=b.progress(a),raw=Number(pair[0])||0,target=Number(pair[1])||1,value=Math.max(0,Math.min(raw,target)),pct=Math.round(value/target*100),earned=unlocked.includes(b.id)||b.test(a);if(earned&&!unlocked.includes(b.id)){unlocked.push(b.id);localStorage.setItem('jee45badges',JSON.stringify(unlocked))}return `<div class="badge ${earned?'earned':'locked'}"><span class="badge-icon">${b.icon}</span><div class="badge-info"><strong>${b.name} ${earned?'✓':''}</strong><small>${b.desc}</small><div class="badge-track"><i style="width:${pct}%"></i></div><small class="badge-status">${earned?'UNLOCKED':`${value.toLocaleString()} / ${target.toLocaleString()} · ${pct}%`}</small></div></div>`}).join('');renderTrophyRoom()}
+
+
+
+// Weekly challenges
+function weekDays(){const d=new Date();d.setHours(0,0,0,0);const day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return Array.from({length:7},(_,i)=>{const x=new Date(d);x.setDate(d.getDate()+i);return todayKey(x)})}
+function weeklyStats(){const days=weekDays(),byDay=days.map(k=>(activity[k]||[]).length),keys=days.flatMap(k=>activity[k]||[]),subjects=Object.keys(DATA.subjects).filter(s=>keys.some(k=>k.startsWith(s+'_'))),pyqIndex=TASKS.indexOf('PYQs'),pyqs=keys.filter(k=>k.endsWith('_'+pyqIndex)).length;return {days,byDay,keys,subjects,pyqs,total:keys.length}}
+function weeklyChallengeBonus(){const w=weeklyStats();return (w.total>=25?100:0)+(w.subjects.length===3?75:0)+(w.pyqs>=5?75:0)}
+function renderWeeklyChallenges(){const el=document.getElementById('weeklyChallenges');if(!el)return;const w=weeklyStats(),qs=[{name:'Consistent practice',desc:'Complete 25 tracker tasks this week.',v:Math.min(w.total,25),t:25,xp:100},{name:'Three-subject balance',desc:'Complete at least one task in all three subjects.',v:w.subjects.length,t:3,xp:75},{name:'PYQ hunter',desc:'Complete 5 PYQ tasks this week.',v:Math.min(w.pyqs,5),t:5,xp:75}];el.innerHTML=qs.map(q=>`<article class="quest-card ${q.v>=q.t?'complete':''}"><div class="quest-icon">${q.v>=q.t?'🏅':'🎯'}</div><h4>${q.name}</h4><p>${q.desc}</p><div class="quest-meta"><span>${q.v}/${q.t}</span><span class="quest-reward">+${q.xp} XP</span></div><div class="quest-track"><i style="width:${Math.round(q.v/q.t*100)}%"></i></div><small class="focus">${q.v>=q.t?'Challenge complete':'In progress'}</small></article>`).join('')}
+
+// Application function: show
+// ------------------------------------------------------------
+// 4. NAVIGATION AND PAGE ROUTING
+// ------------------------------------------------------------
+function show(page){document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));['overview','subject','blocks','quests','trophies','settings'].forEach(id=>document.getElementById(id).classList.add('hidden'));let titles={overview:['Your command centre','Track chapter revision, practice and block-wise execution.'],blocks:['Block-wise plan','Your revision plan, organised by block, subject and tier.'],quests:['Daily quests','Complete small, meaningful objectives at your own pace.'],trophies:['Trophy room','Your achievements, milestones and XP collection.'],settings:['Settings','Customise the look and feel of your study planner.']};if(titles[page]){document.getElementById(page).classList.remove('hidden');document.getElementById('pageTitle').textContent=titles[page][0];document.getElementById('pageSub').textContent=titles[page][1]}else{current=page;document.getElementById('subject').classList.remove('hidden');document.getElementById('subject').dataset.subject=page;document.getElementById('pageTitle').textContent=page+' tracker';document.getElementById('pageSub').textContent='Tick off revision and practice tasks chapter by chapter.';document.getElementById('search').value='';document.getElementById('blockFilter').value='';document.getElementById('tierFilter').value='';subjectSummary();renderTable()}if(page==='trophies')renderTrophyRoom();if(page==='quests')renderQuests();if(page==='settings')renderCustomMaterialManager()}
+document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.page)));document.querySelectorAll('.theme-swatch').forEach(b=>b.addEventListener('click',()=>setPalette(b.dataset.palette)));setPalette(savedPalette);
+
+
+// Application function: buildBlocks
+// ------------------------------------------------------------
+// 5. BLOCK PLAN RENDERING
+// ------------------------------------------------------------
+function buildBlocks(){let groups={},currentBlock=null;DATA.blocks.forEach(r=>{if(r[0]==='ROW'){currentBlock='B'+r[1];groups[currentBlock]=groups[currentBlock]||{headers:[],rows:[]}}else if(currentBlock&&r[0]!==null&&r[0]!==undefined){if(!groups[currentBlock].headers.length)groups[currentBlock].headers=r;else groups[currentBlock].rows.push(r)}});document.getElementById('blockCards').innerHTML=['B1','B2','B3'].map(b=>card(groups[b]||{headers:[],rows:[]},b)).join('')}
+
+
+// Application function: card
+function card(group,block){
+ const headers=group.headers||[],rows=group.rows||[],subjects=['Physics','Chemistry','Maths'];
+ const topicTokens=value=>String(value||'').split('+').map(x=>x.trim()).filter(x=>x&&x!=='—');
+ const allocations=subjects.map(name=>{
+  const tiers=['T1','T2'].map(tier=>{
+   const idx=headers.indexOf(name+' '+tier),codes=[...new Set(rows.flatMap(r=>topicTokens(r[idx])))];
+   return `<div class="allocation-tier"><b>${tier}</b><div class="topic-list">${codes.length?codes.map(code=>`<span class="topic-chip">${code}</span>`).join(''):'<span class="empty-topic">Not allocated</span>'}</div></div>`;
+  }).join('');
+  const t1=headers.indexOf(name+' T1'),t2=headers.indexOf(name+' T2');
+  const subjectCount=[...new Set(rows.flatMap(r=>[...topicTokens(r[t1]),...topicTokens(r[t2])]))].length;
+  return `<section class="allocation-subject subject-${name.toLowerCase()}"><h4>${name}<span>${subjectCount} topics</span></h4><div class="allocation-tiers">${tiers}</div></section>`;
+ }).join('');
+ const count=subjects.reduce((n,name)=>n+['T1','T2'].reduce((m,t)=>{const idx=headers.indexOf(name+' '+t);return m+rows.reduce((z,r)=>z+topicTokens(r[idx]).length,0)},0),0);
+ const [done,total]=blockProgress(block),pct=total?Math.round(done/total*100):0;
+ return `<article class="blockcard blockcard-v2 block-${block.slice(1)}"><header class="blockcard-head"><div><span class="block-kicker">REVISION PHASE</span><h3>${block.replace('B','Block ')}</h3></div><span class="block-count">${count} topics</span></header><div class="block-live"><div class="block-live-line"><span>YOUR EXECUTION</span><span>${done} / ${total} tasks · ${pct}%</span></div><div class="block-live-track"><i style="width:${pct}%"></i></div></div><div class="block-allocation">${allocations}</div></article>`;
+}
+
+
+// Application function: renderMaterialProgress
+// ------------------------------------------------------------
+// 6. ANALYTICS AND PROGRESS RENDERING
+// ------------------------------------------------------------
+function renderMaterialProgress(){const el=document.getElementById('materialBars');if(!el)return;const entries=[...DEFAULT_TASKS.map(name=>({name,subjects:Object.keys(DATA.subjects)})),...customMaterials.map(name=>({name,subjects:customMaterialSubjects[name]||[]}))];el.innerHTML=entries.map(({name,subjects})=>{let j=TASKS.indexOf(name),done=0,total=0;subjects.forEach(s=>DATA.subjects[s].forEach((r,i)=>{total++;if(isDone(s,i,j,r))done++}));let pct=total?Math.round(done/total*100):0;return `<div class="material-item"><div class="material-head"><span>${escapeHtml(name)}${customMaterials.includes(name)?' · '+escapeHtml(subjects.join(', ')):''}</span><span>${done}/${total} · ${pct}%</span></div><div class="material-track"><i style="width:${pct}%"></i></div></div>`}).join('')}
+
+
+// Application function: renderSubjectDetails
+function renderSubjectDetails(){const el=document.getElementById('subjectDetails');if(!el)return;el.innerHTML=Object.keys(DATA.subjects).map(name=>{let c=counts(name),finished=DATA.subjects[name].filter((r,i)=>taskIndicesFor(name).every(x=>isDone(name,i,x.index,r))).length;return `<article class="subject-detail"><h4>${name}</h4><div class="material-head"><span>Overall completion</span><span>${c.pct}%</span></div><div class="material-track"><i style="width:${c.pct}%"></i></div><p>${c.done} of ${c.total} tasks completed</p><p>${finished} of ${c.chapters} chapters fully completed · ${c.started} started</p></article>`}).join('')}
+
+
+// Application function: renderBlockAnalytics
+function renderBlockAnalytics(){const el=document.getElementById('blockAnalytics');if(!el)return;el.innerHTML=['B1','B2','B3'].map((b,i)=>{let [d,t]=blockProgress(b),pct=t?Math.round(d/t*100):0;return `<article class="subject-detail"><h4>${['🩵 Block 1','🟢 Block 2','🟠 Block 3'][i]}</h4><div class="material-head"><span>Completion</span><span>${pct}%</span></div><div class="material-track"><i style="width:${pct}%"></i></div><p>${d} / ${t} assigned tasks completed</p></article>`}).join('')}
+
+
+// Application function: downloadData
+// ------------------------------------------------------------
+// 7. BACKUP, RESET AND INITIALIZATION
+// ------------------------------------------------------------
+function downloadData(){let blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='jee-45-day-progress-backup.json';a.click();URL.revokeObjectURL(a.href)}
+
+
+// Application function: resetData
+function resetData(){if(confirm('Reset all saved checkboxes? This cannot be undone unless you have an exported backup.')){state={};save()}}
+buildBlocks();refresh();renderBadges();renderQuests();renderTrophyRoom();
+</script></body></html>
